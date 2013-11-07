@@ -82,6 +82,7 @@ void myReshape(int w, int h) {
   gluOrtho2D(0, viewport.w, 0, viewport.h);
 }
 
+
 void subdividePatch(std::vector<Point> patch, float step) {
   //finding the number of divisions:
   
