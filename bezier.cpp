@@ -40,17 +40,16 @@ public:
   int w, h; // width and height
 };
 
-//global variables
+// Global variables
 Viewport viewport;
 
 
-//draws a curve
+// Draws a curve
 void Bezier::draw() {
 
 }
 
-
-//function that draws things and loads matrix identity
+/** Glut display method, loads identity matrix and draws */
 void myDisplay() {
   // Clear the color buffer
   glClear(GL_COLOR_BUFFER_BIT);
@@ -65,13 +64,13 @@ void myDisplay() {
   glutSwapBuffers();
 }
 
-// Simple init function
+/** Simple scene initialization */
 void initScene(){
   // WHAT is htis?!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!=--
   // Nothing to do here for this simple example.
 }
 
-/* Reshapes viewport if dragged and reshaped */
+/** Reshapes viewport if dragged and reshaped */
 void myReshape(int w, int h) {
   viewport.w = w;
   viewport.h = h;
@@ -91,38 +90,6 @@ void subdividePatch(std::vector<Point> patch, float step) {
 }
 
 int main(int argc, char *argv[]) {
-
-  //This initializes glut
-  glutInit(&argc, argv);
-
-  //This tells glut to use a double-buffered window with red, green, and blue channels 
-  glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGB);
-
-  // Initalize theviewport size
-  viewport.w = 400;
-  viewport.h = 400;
-
-  //The size and position of the window
-  glutInitWindowSize(viewport.w, viewport.h);
-  glutInitWindowPosition(0,0);
-  glutCreateWindow(argv[0]);
-
-  // Quick setup of scene
-  initScene();
-
-  // Function to run something when the time has c0me
-  glutDisplayFunc(myDisplay);
-  // Function to run when resize window
-  glutReshapeFunc(myReshape);
-  
-  // Infinite loop that will keep drawing and resizing
-  glutMainLoop();
-  // and w4t3v3r else
-
-
-
-  
-
   /** File parsing: */
 
   int numPatches;
@@ -186,17 +153,35 @@ int main(int argc, char *argv[]) {
 	  patch.clear();
 	}
       }
-
     }
-
     inpfile.close();
-    
   }
+
+  /* Glut stuff */
+  // Initialize glut
+  glutInit(&argc, argv);
+
+  // Double buffered window with RGB channels
+  glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGB);
+
+  // Initalize the viewport size
+  viewport.w = 400;
+  viewport.h = 400;
+
+  // Set up the window
+  glutInitWindowSize(viewport.w, viewport.h);
+  glutInitWindowPosition(0,0);
+  glutCreateWindow("Bezier surfaces");
+
+  // Quick setup of scene
+  initScene();
+
+  // Repeat callback handler
+  glutDisplayFunc(myDisplay);
+  // Resize window callback handler
+  glutReshapeFunc(myReshape);
   
-
-
-
-
-
+  // Glut main infinite loop
+  glutMainLoop();
 }
 
