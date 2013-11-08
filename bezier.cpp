@@ -1,12 +1,12 @@
-#include "bezier.h"
-
 #include <map>
 #include <string>
 #include <vector>
 #include <iostream>
 #include <sstream>
 #include <fstream>
-#include <stdexcept>
+
+
+#include <sys/time.h>
 
 #ifdef OSX
 #include <GLUT/glut.h>
@@ -16,13 +16,19 @@
 #include <GL/glu.h>
 #endif
 
+#include <stdio.h>
+#include <stdlib.h>
+#include <stdexcept>
 #include <time.h>
 #include <math.h>
-#include <algorithm>
 
 /** Class Declarations */
 class Point;
 class Viewpoint;
+
+/** Method Declarations */
+Point bezSurfacifier(std::vector<Point> bsCPoints, float u, float v);
+Point bezCurvifier(Point p0, Point p1, Point p2, Point p3, float t);
 
 /** 3D Point class */
 class Point {
@@ -35,19 +41,23 @@ public:
   float x, y, z;
 };
 
+/** Viewport class  */
 class Viewport {
 public:
   int w, h; // width and height
 };
 
-// Global variables
+
+/** Global variables */
 Viewport viewport;
-std::vector< std::vector<Point> > unifPatches;
+int numPatches;
+std::vector< std::vector<Point> > patches; // control points
+float subStep;
+std::string tesType;
+std::vector< std::vector<Point> > unifPatches; // bezier surface points
 
-// Draws a curve
-void Bezier::draw() {
 
-}
+
 
 /** Glut display method, loads identity matrix and draws */
 void myDisplay() {
@@ -57,6 +67,9 @@ void myDisplay() {
   glMatrixMode(GL_MODELVIEW);
   // Zero the first transformation
   glLoadIdentity();
+
+  
+  
   
 
   glFlush();
@@ -157,15 +170,8 @@ Point bezCurvifier(Point p0, Point p1, Point p2, Point p3, float t) {
 }
 
 
-
-
 int main(int argc, char *argv[]) {
   /** File parsing: */
-
-  int numPatches;
-  std::vector< std::vector<Point> > patches;
-  float subStep;
-  std::string tesType;
 
   // Parsing command line for: input file name, the subdivision paramter, and
   // the flag which determines if subdivision should be adaptive or uniform:
