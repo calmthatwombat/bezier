@@ -154,29 +154,30 @@ void bezPatchInterp(std::vector<Point> patch, float u, float v) {
   //build the control points for a Bezier curve in u:
   //(same process as above):
   uCurveControlPoints.push_back(patch[0]);
-  uCurveControlPoints.push_back(patch[1]);
-  uCurveControlPoints.push_back(patch[2]);
-  uCurveControlPoints.push_back(patch[3]);
-  ucurve.push_back(bezCurveInterp(uCurveControlPoints, v);
-  uCurveControlPoints.clear();
-
   uCurveControlPoints.push_back(patch[4]);
-  uCurveControlPoints.push_back(patch[5]);
-  uCurveControlPoints.push_back(patch[6]);
-  uCurveControlPoints.push_back(patch[7]);
-  ucurve.push_back(bezCurveInterp(uCurveControlPoints, v);
-  uCurveControlPoints.clear();
-
   uCurveControlPoints.push_back(patch[8]);
+  uCurveControlPoints.push_back(patch[12]);
+  std::vector<Point> tuple = bezCurveInterp(uCurveControlPoints, v)
+  ucurve.push_back(tuple[0]);
+  uCurveControlPoints.clear();
+
+  uCurveControlPoints.push_back(patch[1]);
+  uCurveControlPoints.push_back(patch[5]);
   uCurveControlPoints.push_back(patch[9]);
-  uCurveControlPoints.push_back(patch[10]);
-  uCurveControlPoints.push_back(patch[11]);
+  uCurveControlPoints.push_back(patch[13]);
   ucurve.push_back(bezCurveInterp(uCurveControlPoints, v);
   uCurveControlPoints.clear();
 
-  uCurveControlPoints.push_back(patch[12]);
-  uCurveControlPoints.push_back(patch[13]);
+  uCurveControlPoints.push_back(patch[2]);
+  uCurveControlPoints.push_back(patch[6]);
+  uCurveControlPoints.push_back(patch[10]);
   uCurveControlPoints.push_back(patch[14]);
+  ucurve.push_back(bezCurveInterp(uCurveControlPoints, v);
+  uCurveControlPoints.clear();
+
+  uCurveControlPoints.push_back(patch[3]);
+  uCurveControlPoints.push_back(patch[7]);
+  uCurveControlPoints.push_back(patch[11]);
   uCurveControlPoints.push_back(patch[15]);
   ucurve.push_back(bezCurveInterp(uCurveControlPoints, v);
   uCurveControlPoints.clear();
@@ -199,8 +200,9 @@ void bezPatchInterp(std::vector<Point> patch, float u, float v) {
 }
 
 //given the control points of a bezier curve and a parametric
-//value, return the curve point and derivative:
-Point bezCurveInterp(std::vector<Point> curve, float u, Point &derivative) {
+//value, return a vector of size 2 containing: the curve point
+//and derivative point:
+std::vector<Point> bezCurveInterp(std::vector<Point> curve, float u) {
   //first, split each of the three segments to form
   // two new ones AB and BC:
   //Lizzie question: can I multiply points like that? 
@@ -233,11 +235,15 @@ Point bezCurveInterp(std::vector<Point> curve, float u, Point &derivative) {
   //computing the derivative:
   //finding Point E - Point D:
   Point EMinusD(E.x - D.x, E.y - D.y, E.z - D.z);
-  derivative(3 * EMinusD.x, 3 * EMinusD.y, 3 * EMinusD.z);
+  Point derivP(3 * EMinusD.x, 3 * EMinusD.y, 3 * EMinusD.z);
 
-  //somehow store the derivative point somewhere??????
+  //finalTuple will contain: (finalP, derivativeP)
+  std::vector<Point> finalTuple;
+  finalTuple[0] = finalP;
+  finalTuple[1] = derivP;
 
-  return finalP;
+
+  return finalTuple;
 }
 
 
