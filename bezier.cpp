@@ -42,7 +42,7 @@ public:
 
 // Global variables
 Viewport viewport;
-
+std::vector< std::vector<Point> > unifPatches;
 
 // Draws a curve
 void Bezier::draw() {
@@ -81,8 +81,12 @@ void myReshape(int w, int h) {
   gluOrtho2D(0, viewport.w, 0, viewport.h);
 }
 
-
-void subdividePatch(std::vector<Point> patch, float step) {
+/** Given a patch containing 16 control points, push back a patch of (numDiv + 1)**2 
+ *  surface points into unifPatches vector. */
+void subdividePatch (std::vector<Point> patch, float step) {
+  // current patch
+  std::vector<Point> currPatch;
+  
   //setting the epsilon value:
   float epsilon = 0.000001;
 
@@ -94,160 +98,65 @@ void subdividePatch(std::vector<Point> patch, float step) {
   int numDiv = ((1 + epsilon) / step);
 
   //for each parametric value of u:
-  for (float iu = 0; iu < numDiv; iu++ ) {
+  for (float iu = 0; iu <= numDiv; iu++ ) {
     u = iu * step;
-
     //for each parametric value of v:
-    for (float iv = 0; iv < numDiv; iv++) {
+    for (float iv = 0; iv <= numDiv; iv++) {
       v = iv * step;
-
-      //evaluating the surface:
-      bezPatchInterp(patch, u, v);
-
-      //save the surfacepoint and normal somehwere??!!!
-      //saveSurfacePointAndNormal(p, n);
+      // Calculate point
+      currPatch.push_back(bezSurfacifier(patch, u, v));
     }
   }
+  // Push this patch onto unifPatches
+  unifPatches.push_back(currPatch);
 }
 
-//given the control patch and (u, v) values, find the surface
-//point and normal
-void bezPatchInterp(std::vector<Point> patch, float u, float v) {
-  //the v and u curves:
-  std::vector<Point> vcurve;
-  std::vector<Point> ucurve;
-
-  //the control points for the curves in v and u:
-  std::vector<Point> vCurveControlPoints;
-  std::vector<Point> uCurveControlPoints;
-
-  //build the control points for a Bezier curve in v:
-  //where patch[index] = Point(x, y, z)
-  vCurveControlPoints.push_back(patch[0]);
-  vCurveControlPoints.push_back(patch[1]);
-  vCurveControlPoints.push_back(patch[2]);
-  vCurveControlPoints.push_back(patch[3]);
-  vcurve.push_back(bezCurveInterp(vCurveControlPoints, u);
-  vCurveControlPoints.clear();
-
-  vCurveControlPoints.push_back(patch[4]);
-  vCurveControlPoints.push_back(patch[5]);
-  vCurveControlPoints.push_back(patch[6]);
-  vCurveControlPoints.push_back(patch[7]);
-  vcurve.push_back(bezCurveInterp(vCurveControlPoints, u);
-  vCurveControlPoints.clear();
-
-  vCurveControlPoints.push_back(patch[8]);
-  vCurveControlPoints.push_back(patch[9]);
-  vCurveControlPoints.push_back(patch[10]);
-  vCurveControlPoints.push_back(patch[11]);
-  vcurve.push_back(bezCurveInterp(vCurveControlPoints, u);
-  vCurveControlPoints.clear();
-
-  vCurveControlPoints.push_back(patch[12]);
-  vCurveControlPoints.push_back(patch[13]);
-  vCurveControlPoints.push_back(patch[14]);
-  vCurveControlPoints.push_back(patch[15]);
-  vcurve.push_back(bezCurveInterp(vCurveControlPoints, u);
-  vCurveControlPoints.clear();
-
-  //build the control points for a Bezier curve in u:
-  //(same process as above):
-  uCurveControlPoints.push_back(patch[0]);
-  uCurveControlPoints.push_back(patch[4]);
-  uCurveControlPoints.push_back(patch[8]);
-  uCurveControlPoints.push_back(patch[12]);
-  std::vector<Point> tuple = bezCurveInterp(uCurveControlPoints, v)
-  ucurve.push_back(tuple[0]);
-  uCurveControlPoints.clear();
-
-  uCurveControlPoints.push_back(patch[1]);
-  uCurveControlPoints.push_back(patch[5]);
-  uCurveControlPoints.push_back(patch[9]);
-  uCurveControlPoints.push_back(patch[13]);
-  ucurve.push_back(bezCurveInterp(uCurveControlPoints, v);
-  uCurveControlPoints.clear();
-
-  uCurveControlPoints.push_back(patch[2]);
-  uCurveControlPoints.push_back(patch[6]);
-  uCurveControlPoints.push_back(patch[10]);
-  uCurveControlPoints.push_back(patch[14]);
-  ucurve.push_back(bezCurveInterp(uCurveControlPoints, v);
-  uCurveControlPoints.clear();
-
-  uCurveControlPoints.push_back(patch[3]);
-  uCurveControlPoints.push_back(patch[7]);
-  uCurveControlPoints.push_back(patch[11]);
-  uCurveControlPoints.push_back(patch[15]);
-  ucurve.push_back(bezCurveInterp(uCurveControlPoints, v);
-  uCurveControlPoints.clear();
-
-  //evaluate surface and derivative for u and v:
-  // p, dPdv = bezCurveInterp(vcurve, v);
-  // p, dPdv = bezCurveInterp(ucurve, u);
-
-
-  Point surfacePointP = bezCurveInterp(vcurve, v);
-  Point surfacePointU = bezCurveInterp(ucurve, u);
-
-
-  //take the crossproduct of partials to find normal
-  //vector<float> n = cross(dPdu, dPdv);
-  //n = n / n.size();
-
-  //return p, n;
-
+/** Create SURFACE bezier point, given u and v of bezier surface control points 
+ *  bsCPoints == bezier surface Control Points */
+Point bezSurfacifier(std::vector<Point> bsCPoints, float u, float v) {
+  Point A = bezCurvifier(bsCPoints[0], bsCPoints[1], bsCPoints[2], bsCPoints[3], 
+			 u);
+  Point B = bezCurvifier(bsCPoints[4], bsCPoints[5], bsCPoints[6], bsCPoints[7], 
+			 u);
+  Point C = bezCurvifier(bsCPoints[8], bsCPoints[9], bsCPoints[10], bsCPoints[11], 
+			 u);
+  Point D = bezCurvifier(bsCPoints[12], bsCPoints[13], bsCPoints[14], bsCPoints[15], 
+			 u);
+  return bezCurvifier(A, B, C, D, v);
 }
 
-//given the control points of a bezier curve and a parametric
-//value, return a vector of size 2 containing: the curve point
-//and derivative point:
-std::vector<Point> bezCurveInterp(std::vector<Point> curve, float u) {
-  //first, split each of the three segments to form
-  // two new ones AB and BC:
-  //Lizzie question: can I multiply points like that? 
-  Point A(curve[0].x * (1.0 - u) + curve[1].x * u,
-          curve[0].y * (1.0 - u) + curve[1].y * u,
-          curve[0].z * (1.0 - u) + curve[1].z * u);
+/** Create CURVE bezier point, given u and v of bezier curve control points */
+Point bezCurvifier(Point p0, Point p1, Point p2, Point p3, float t) {
+  // Order matters
+  Point A(p0.x * (1.0 - t) + p1.x * t,
+          p0.y * (1.0 - t) + p1.y * t,
+          p0.z * (1.0 - t) + p1.z * t);
 
-  Point B(curve[1].x * (1.0 - u) + curve[2].x * u,
-          curve[1].y * (1.0 - u) + curve[2].y * u,
-          curve[1].z * (1.0 - u) + curve[2].z * u);
+  Point B(p1.x * (1.0 - t) + p2.x * t,
+          p1.y * (1.0 - t) + p2.y * t,
+          p1.z * (1.0 - t) + p2.z * t);
 
-  Point C(curve[2].x * (1.0 - u) + curve[3].x * u,
-          curve[2].y * (1.0 - u) + curve[3].y * u,
-          curve[2].z * (1.0 - u) + curve[3].z * u);
+  Point C(p2.x * (1.0 - t) + p3.x * t,
+          p2.y * (1.0 - t) + p3.y * t,
+          p2.z * (1.0 - t) + p3.z * t);
 
   //Now, split AB and BC to form a new segment DE:
-  Point D(A.x * (1.0 - u) + B.x * u,
-          A.y * (1.0 - u) + B.y * u,
-          A.z * (1.0 - u) + B.z * u);
+  Point D(A.x * (1.0 - t) + B.x * t,
+          A.y * (1.0 - t) + B.y * t,
+          A.z * (1.0 - t) + B.z * t);
 
-  Point E(B.x * (1.0 - u) + C.x * u,
-          B.y * (1.0 - u) + C.y * u,
-          B.z * (1.0 - u) + C.z * u);
+  Point E(B.x * (1.0 - t) + C.x * t,
+          B.y * (1.0 - t) + C.y * t,
+          B.z * (1.0 - t) + C.z * t);
 
   //Finally, picking the right point on DE:
-  Point finalP(D.x * (1.0 - u) + E.x * u,
-                D.y * (1.0 - u) + E.y * u,
-                D.z * (1.0 - u) + E.z * u);
-
-  //computing the derivative:
-  //finding Point E - Point D:
-  Point EMinusD(E.x - D.x, E.y - D.y, E.z - D.z);
-  Point derivP(3 * EMinusD.x, 3 * EMinusD.y, 3 * EMinusD.z);
-
-  //finalTuple will contain: (finalP, derivativeP)
-  std::vector<Point> finalTuple;
-  finalTuple[0] = finalP;
-  finalTuple[1] = derivP;
-
-
-  return finalTuple;
+  Point finalP(D.x * (1.0 - t) + E.x * t,
+	       D.y * (1.0 - t) + E.y * t,
+	       D.z * (1.0 - t) + E.z * t);
+  return finalP;
 }
 
 
-  
 
 
 int main(int argc, char *argv[]) {
