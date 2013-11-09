@@ -4,6 +4,8 @@
 #include <iostream>
 #include <sstream>
 #include <fstream>
+#include <stdio.h>
+#include <stdlib.h>
 
 
 #include <sys/time.h>
@@ -16,8 +18,6 @@
 #include <GL/glu.h>
 #endif
 
-#include <stdio.h>
-#include <stdlib.h>
 #include <stdexcept>
 #include <time.h>
 #include <math.h>
