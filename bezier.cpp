@@ -4,7 +4,8 @@
 #include <iostream>
 #include <sstream>
 #include <fstream>
-
+#include <stdio.h>
+#include <stdlib.h>
 
 #include <sys/time.h>
 
@@ -16,8 +17,7 @@
 #include <GL/glu.h>
 #endif
 
-#include <stdio.h>
-#include <stdlib.h>
+
 #include <stdexcept>
 #include <time.h>
 #include <math.h>
@@ -27,6 +27,7 @@ class Point;
 class Viewpoint;
 
 /** Method Declarations */
+void subdividePatch (std::vector<Point> patch, float step);
 Point bezSurfacifier(std::vector<Point> bsCPoints, float u, float v);
 Point bezCurvifier(Point p0, Point p1, Point p2, Point p3, float t);
 
@@ -68,6 +69,23 @@ void myDisplay() {
   // Zero the first transformation
   glLoadIdentity();
 
+  for (int i = 0; i < patches.size(); i++) {
+    subdividePatch(patches[i], subStep);
+  }
+
+  for (int i = 0; i < unifPatches.size(); i++) {
+
+  }
+
+  glBegin(GL_QUADS);
+
+  glVertex3f( 0.0f, 0.3f, 0.0f ); //top left
+  glVertex3f( 0.0f, 0.0f, 0.0f ); //bottom left
+  glVertex3f( 0.3f, 0.0f, 0.0f ); //bottom right
+  glVertex3f( 0.3f, 0.3f, 0.0f );  //top right
+
+  glEnd();
+
   
   
   
@@ -77,11 +95,7 @@ void myDisplay() {
   glutSwapBuffers();
 }
 
-/** Simple scene initialization */
-void initScene(){
-  // WHAT is htis?!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!=--
-  // Nothing to do here for this simple example.
-}
+
 
 /** Reshapes viewport if dragged and reshaped */
 void myReshape(int w, int h) {
@@ -91,7 +105,16 @@ void myReshape(int w, int h) {
   glViewport (0,0,viewport.w,viewport.h);
   glMatrixMode(GL_PROJECTION);
   glLoadIdentity();
-  gluOrtho2D(0, viewport.w, 0, viewport.h);
+  //gluOrtho2D(0, viewport.w, 0, viewport.h);
+  glOrtho(-1, 1, -1, 1, 1, -1);    // resize type = stretch
+}
+
+/** Simple scene initialization */
+void initScene(){
+
+  glClearColor(0.0f, 0.0f, 0.0f, 0.0f); // Clear to black, fully transparent
+  myReshape(viewport.w,viewport.h);
+
 }
 
 /** Given a patch containing 16 control points, push back a patch of (numDiv + 1)**2 
@@ -127,14 +150,10 @@ void subdividePatch (std::vector<Point> patch, float step) {
 /** Create SURFACE bezier point, given u and v of bezier surface control points 
  *  bsCPoints == bezier surface Control Points */
 Point bezSurfacifier(std::vector<Point> bsCPoints, float u, float v) {
-  Point A = bezCurvifier(bsCPoints[0], bsCPoints[1], bsCPoints[2], bsCPoints[3], 
-			 u);
-  Point B = bezCurvifier(bsCPoints[4], bsCPoints[5], bsCPoints[6], bsCPoints[7], 
-			 u);
-  Point C = bezCurvifier(bsCPoints[8], bsCPoints[9], bsCPoints[10], bsCPoints[11], 
-			 u);
-  Point D = bezCurvifier(bsCPoints[12], bsCPoints[13], bsCPoints[14], bsCPoints[15], 
-			 u);
+  Point A = bezCurvifier(bsCPoints[0], bsCPoints[1], bsCPoints[2], bsCPoints[3], u);
+  Point B = bezCurvifier(bsCPoints[4], bsCPoints[5], bsCPoints[6], bsCPoints[7], u);
+  Point C = bezCurvifier(bsCPoints[8], bsCPoints[9], bsCPoints[10], bsCPoints[11], u);
+  Point D = bezCurvifier(bsCPoints[12], bsCPoints[13], bsCPoints[14], bsCPoints[15], u);
   return bezCurvifier(A, B, C, D, v);
 }
 
@@ -170,6 +189,53 @@ Point bezCurvifier(Point p0, Point p1, Point p2, Point p3, float t) {
 }
 
 
+/** 
+ * NORMALKEYFUNC method specifies fill, wireframe, and shading
+   options of the object. */
+void normalKeyFunc(unsigned char key, int x, int y) {
+
+  switch(key){
+    // spacebar : closes window
+    case 32:
+      exit(0);
+      break;
+    // s : flat to smooth shading
+    case 's':
+      /*toggle flat to smooth shading */
+      break;
+    // w : filled to wireframe
+    case 'w':
+      /*toggle between filled and wirefram */
+      break;
+    }
+}
+
+
+/** 
+ * SPECIALKEYFUNC method specifies the zoom, transformation.*/
+
+void specialKeyFunc(int key, int x, int y) {
+  switch(key){
+    // left arrow : rotate object
+    case GLUT_KEY_LEFT :
+      /*do object rotation */
+      break;
+    // right arrow : rotate object
+    case GLUT_KEY_RIGHT :
+      /*do object rotations */
+      break;
+    // up arrow : rotate object
+    case GLUT_KEY_UP :
+      /*do object rotations */
+      break;
+    case GLUT_KEY_DOWN :
+      /* do object rotations */
+      break;
+    
+    }
+}
+
+
 int main(int argc, char *argv[]) {
   /** File parsing: */
 
@@ -194,40 +260,40 @@ int main(int argc, char *argv[]) {
       std::stringstream ss(line);
 
       while (ss >> buf) { 
-	splitline.push_back(buf); 
+        splitline.push_back(buf); 
       }
 
       // Ignore blank lines 
       if(splitline.size() == 0) { 
-	continue; 
+	     continue;  
       } 
       if (splitline.size() == 1) { 
-	numPatches = atoi(splitline[0].c_str()); 
-	continue;//not sure if I need this 
+       numPatches = atoi(splitline[0].c_str()); 
+	     continue;//not sure if I need this 
       } else {
-	Point p1(atof(splitline[0].c_str()), 
-		 atof(splitline[1].c_str()), 
-		 atof(splitline[2].c_str())); 
-	Point p2(atof(splitline[3].c_str()), 
-		 atof(splitline[4].c_str()), 
-		 atof(splitline[5].c_str())); 
-	Point p3(atof(splitline[6].c_str()), 
-		 atof(splitline[7].c_str()), 
-		 atof(splitline[8].c_str())); 
-	Point p4(atof(splitline[9].c_str()), 
-		 atof(splitline[10].c_str()), 
-		 atof(splitline[11].c_str()));
+       Point p1(atof(splitline[0].c_str()), 
+         atof(splitline[1].c_str()), 
+         atof(splitline[2].c_str())); 
+       Point p2(atof(splitline[3].c_str()), 
+         atof(splitline[4].c_str()), 
+         atof(splitline[5].c_str())); 
+       Point p3(atof(splitline[6].c_str()), 
+         atof(splitline[7].c_str()), 
+         atof(splitline[8].c_str())); 
+       Point p4(atof(splitline[9].c_str()), 
+         atof(splitline[10].c_str()), 
+         atof(splitline[11].c_str()));
 
-	patch.push_back(p1); 
-	patch.push_back(p2); 
-	patch.push_back(p3); 
-	patch.push_back(p4);
+       patch.push_back(p1); 
+       patch.push_back(p2); 
+       patch.push_back(p3); 
+       patch.push_back(p4);
 
-	// If patch size is 16, then make patch is done and look for next patch
-	if (patch.size() == 16) {
-	  patches.push_back(patch);
-	  patch.clear();
-	}
+	     // If patch size is 16, then make patch is done and look for next patch
+       if (patch.size() == 16) {
+         patches.push_back(patch);
+         patch.clear();
+       }
       }
     }
     inpfile.close();
@@ -256,6 +322,8 @@ int main(int argc, char *argv[]) {
   glutDisplayFunc(myDisplay);
   // Resize window callback handler
   glutReshapeFunc(myReshape);
+  glutKeyboardFunc(normalKeyFunc);
+  glutSpecialFunc(specialKeyFunc);
   
   // Glut main infinite loop
   glutMainLoop();
