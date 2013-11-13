@@ -197,8 +197,8 @@ void LightSetUp() {
 
 
   //enabling the lighting
-  glEnable(GL_LIGHTING);
-  glEnable(GL_LIGHT0);
+  // glEnable(GL_LIGHTING);
+  // glEnable(GL_LIGHT0);
 
 }
 
@@ -315,9 +315,13 @@ void normalKeyFunc(unsigned char key, int x, int y) {
     case 's':
       /*toggle flat to smooth shading */
       if (isFlat) {
+        glEnable(GL_LIGHTING);
+        glEnable(GL_LIGHT0);
         glShadeModel(GL_SMOOTH);
         isFlat = false;
       } else {
+        glEnable(GL_LIGHTING);
+        glEnable(GL_LIGHT0);
         glShadeModel(GL_FLAT);
         isFlat = true;
       }
@@ -325,9 +329,11 @@ void normalKeyFunc(unsigned char key, int x, int y) {
     // w : filled to wireframe
     case 'w':
       if (isWireframe) {
+        glDisable(GL_LIGHTING);
         glPolygonMode( GL_FRONT_AND_BACK, GL_FILL );
         isWireframe = false;
       } else {
+        glDisable(GL_LIGHTING);
         glPolygonMode( GL_FRONT_AND_BACK, GL_LINE );
         isWireframe = true;
       }
