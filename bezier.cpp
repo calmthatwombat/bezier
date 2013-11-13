@@ -7,7 +7,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-
 #include <sys/time.h>
 
 #ifdef OSX
@@ -27,8 +26,11 @@ class Point;
 class Viewpoint;
 
 /** Method Declarations */
+void subdividePatch (std::vector<Point> patch, float step);
 Point bezSurfacifier(std::vector<Point> bsCPoints, float u, float v);
 Point bezCurvifier(Point p0, Point p1, Point p2, Point p3, float t);
+void unifTesselator();
+void adapTesselator();
 
 /** 3D Point class */
 class Point {
@@ -67,21 +69,44 @@ void myDisplay() {
   glMatrixMode(GL_MODELVIEW);
   // Zero the first transformation
   glLoadIdentity();
+  // Camera
+  gluLookAt(0, 5, 1, 0, 0, 1, 0, 0, 1);
+  // Wireframe mode
+  if (0)
+    glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 
-  
-  
-  
+  // Uniform tesselation
+  unifTesselator();
 
   glFlush();
   // We earlier set double buffers
   glutSwapBuffers();
 }
 
-/** Simple scene initialization */
-void initScene(){
-  // WHAT is htis?!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!=--
-  // Nothing to do here for this simple example.
+/** Draw uniform tesselation form */
+void unifTesselator() {
+  for (int i = 0; i < numPatches; i++) {
+    int sqrtNumQuads = sqrt(unifPatches[i].size()) - 1;
+    for (int j = 0; j < sqrtNumQuads; j++) {
+      for (int k = 0; k < sqrtNumQuads; k++) {
+	Point tl = unifPatches[i][j*sqrtNumQuads + k];	   // top left
+	Point bl = unifPatches[i][(j+1)*sqrtNumQuads + k]; // bottom left
+	Point br = unifPatches[i][(j+1)*sqrtNumQuads + k + 1]; // bottom right
+	Point tr = unifPatches[i][j*sqrtNumQuads + k + 1]; // top right
+	
+	glBegin(GL_QUADS);
+	glVertex3f(tl.x, tl.y, tl.z); //top left
+	glVertex3f(bl.x, bl.y, bl.z); //bottom left
+	glVertex3f(br.x, br.y, br.z); //bottom right
+	glVertex3f(tr.x, tr.y, tr.z); //top right
+	//glNormal3f();
+	glEnd();
+      }
+    }
+  }
 }
+
+
 
 /** Reshapes viewport if dragged and reshaped */
 void myReshape(int w, int h) {
@@ -89,9 +114,31 @@ void myReshape(int w, int h) {
   viewport.h = h;
 
   glViewport (0,0,viewport.w,viewport.h);
+  // Projection matrix
   glMatrixMode(GL_PROJECTION);
   glLoadIdentity();
-  gluOrtho2D(0, viewport.w, 0, viewport.h);
+  glOrtho(-4, 4, -4, 4, 1, 30);
+  //gluPerspective(60, 1, 1, 30);
+}
+
+/** Simple scene initialization */
+void initScene(){
+
+  /** Set up unifPatches only one time  */
+  for (int i = 0; i < patches.size(); i++) {
+    subdividePatch(patches[i], subStep);
+  }
+  
+  // for (int i = 0; i < unifPatches[0].size(); i++) {
+  //   int width = (int) sqrt((double) unifPatches[0].size());
+  //   if (i % width == 0)
+  //     printf("\n");
+  //   printf(" %.2f %.2f %.2f |", unifPatches[0][i].x, unifPatches[0][i].y, unifPatches[0][i].z);
+  // }
+
+  glClearColor(0.0f, 0.0f, 0.0f, 0.0f); // Clear to black, fully transparent
+  myReshape(viewport.w,viewport.h);
+
 }
 
 /** Given a patch containing 16 control points, push back a patch of (numDiv + 1)**2 
@@ -101,7 +148,7 @@ void subdividePatch (std::vector<Point> patch, float step) {
   std::vector<Point> currPatch;
   
   //setting the epsilon value:
-  float epsilon = 0.000001;
+  const float epsilon = 0.000001;
 
   //the parametric values u, v
   float u;
@@ -110,12 +157,21 @@ void subdividePatch (std::vector<Point> patch, float step) {
   //finding the number of divisions:
   int numDiv = ((1 + epsilon) / step);
 
-  //for each parametric value of u:
-  for (float iu = 0; iu <= numDiv; iu++ ) {
+
+  // For each parametric value of u:
+  for (float iu = 0; iu < numDiv + 2; iu++ ) {
     u = iu * step;
-    //for each parametric value of v:
-    for (float iv = 0; iv <= numDiv; iv++) {
+    if (iu == numDiv + 1 || (u >= 1.0f && iu == numDiv)) {
+      iu++;
+      u = 1.0f;
+    }
+    // For each parametric value of v:
+    for (float iv = 0; iv < numDiv + 2; iv++) {
       v = iv * step;
+      if (iv == numDiv + 1 || (v >= 1.0f && iv == numDiv)) {
+	iv++;
+	v = 1.0f;
+      }
       // Calculate point
       currPatch.push_back(bezSurfacifier(patch, u, v));
     }
@@ -127,14 +183,10 @@ void subdividePatch (std::vector<Point> patch, float step) {
 /** Create SURFACE bezier point, given u and v of bezier surface control points 
  *  bsCPoints == bezier surface Control Points */
 Point bezSurfacifier(std::vector<Point> bsCPoints, float u, float v) {
-  Point A = bezCurvifier(bsCPoints[0], bsCPoints[1], bsCPoints[2], bsCPoints[3], 
-			 u);
-  Point B = bezCurvifier(bsCPoints[4], bsCPoints[5], bsCPoints[6], bsCPoints[7], 
-			 u);
-  Point C = bezCurvifier(bsCPoints[8], bsCPoints[9], bsCPoints[10], bsCPoints[11], 
-			 u);
-  Point D = bezCurvifier(bsCPoints[12], bsCPoints[13], bsCPoints[14], bsCPoints[15], 
-			 u);
+  Point A = bezCurvifier(bsCPoints[0], bsCPoints[1], bsCPoints[2], bsCPoints[3], u);
+  Point B = bezCurvifier(bsCPoints[4], bsCPoints[5], bsCPoints[6], bsCPoints[7], u);
+  Point C = bezCurvifier(bsCPoints[8], bsCPoints[9], bsCPoints[10], bsCPoints[11], u);
+  Point D = bezCurvifier(bsCPoints[12], bsCPoints[13], bsCPoints[14], bsCPoints[15], u);
   return bezCurvifier(A, B, C, D, v);
 }
 
@@ -170,6 +222,53 @@ Point bezCurvifier(Point p0, Point p1, Point p2, Point p3, float t) {
 }
 
 
+/** 
+ * NORMALKEYFUNC method specifies fill, wireframe, and shading
+ options of the object. */
+void normalKeyFunc(unsigned char key, int x, int y) {
+
+  switch(key){
+    // spacebar : closes window
+  case 32:
+    exit(0);
+    break;
+    // s : flat to smooth shading
+  case 's':
+    /*toggle flat to smooth shading */
+    break;
+    // w : filled to wireframe
+  case 'w':
+    /*toggle between filled and wirefram */
+    break;
+  }
+}
+
+
+/** 
+ * SPECIALKEYFUNC method specifies the zoom, transformation.*/
+
+void specialKeyFunc(int key, int x, int y) {
+  switch(key){
+    // left arrow : rotate object
+  case GLUT_KEY_LEFT :
+    /*do object rotation */
+    break;
+    // right arrow : rotate object
+  case GLUT_KEY_RIGHT :
+    /*do object rotations */
+    break;
+    // up arrow : rotate object
+  case GLUT_KEY_UP :
+    /*do object rotations */
+    break;
+  case GLUT_KEY_DOWN :
+    /* do object rotations */
+    break;
+    
+  }
+}
+
+
 int main(int argc, char *argv[]) {
   /** File parsing: */
 
@@ -194,12 +293,12 @@ int main(int argc, char *argv[]) {
       std::stringstream ss(line);
 
       while (ss >> buf) { 
-	splitline.push_back(buf); 
+        splitline.push_back(buf); 
       }
 
       // Ignore blank lines 
       if(splitline.size() == 0) { 
-	continue; 
+	continue;  
       } 
       if (splitline.size() == 1) { 
 	numPatches = atoi(splitline[0].c_str()); 
@@ -241,8 +340,8 @@ int main(int argc, char *argv[]) {
   glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGB);
 
   // Initalize the viewport size
-  viewport.w = 400;
-  viewport.h = 400;
+  viewport.w = 800;
+  viewport.h = 800;
 
   // Set up the window
   glutInitWindowSize(viewport.w, viewport.h);
@@ -256,6 +355,8 @@ int main(int argc, char *argv[]) {
   glutDisplayFunc(myDisplay);
   // Resize window callback handler
   glutReshapeFunc(myReshape);
+  glutKeyboardFunc(normalKeyFunc);
+  glutSpecialFunc(specialKeyFunc);
   
   // Glut main infinite loop
   glutMainLoop();
