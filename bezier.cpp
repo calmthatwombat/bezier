@@ -31,6 +31,8 @@ Point bezSurfacifier(std::vector<Point> bsCPoints, float u, float v);
 Point bezCurvifier(Point p0, Point p1, Point p2, Point p3, float t);
 void unifTesselator();
 void adapTesselator();
+void cameraSetUp();
+void lightSetUp();
 
 /** 3D Point class */
 class Point {
@@ -58,22 +60,34 @@ float subStep;
 std::string tesType;
 std::vector< std::vector<Point> > unifPatches; // bezier surface points
 
+float zoom = 0.0;
+float rotateX = 0.0;
+float rotateY = 0.0;
+float translateX = 0.0;
+float translateY = 0.0;
+
+bool isWireframe;
+bool isFlat;
 
 
 
 /** Glut display method, loads identity matrix and draws */
 void myDisplay() {
+
   // Clear the color buffer
   glClear(GL_COLOR_BUFFER_BIT);
+
   // Indicate we are specifying camera transformations
   glMatrixMode(GL_MODELVIEW);
   // Zero the first transformation
   glLoadIdentity();
   // Camera
-  gluLookAt(0, 5, 1, 0, 0, 1, 0, 0, 1);
-  // Wireframe mode
-  if (0)
-    glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+  gluLookAt(0, 0, 5, 0, 0, 0, 0, 1, 0);
+
+  glTranslatef(translateX, translateY, 0.0f);
+  glRotatef(rotateX, 1.0, 0.0, 0.0 );
+  glRotatef(rotateY, 0.0, 1.0, 0.0 );
+  //glScalef(zoom, zoom, zoom);////
 
   // Uniform tesselation
   unifTesselator();
@@ -89,36 +103,68 @@ void unifTesselator() {
     int sqrtNumQuads = sqrt(unifPatches[i].size()) - 1;
     for (int j = 0; j < sqrtNumQuads; j++) {
       for (int k = 0; k < sqrtNumQuads; k++) {
-	Point tl = unifPatches[i][j*sqrtNumQuads + k];	   // top left
-	Point bl = unifPatches[i][(j+1)*sqrtNumQuads + k]; // bottom left
-	Point br = unifPatches[i][(j+1)*sqrtNumQuads + k + 1]; // bottom right
-	Point tr = unifPatches[i][j*sqrtNumQuads + k + 1]; // top right
+	Point tl = unifPatches[i][j*(sqrtNumQuads+1) + k];	   // top left
+	Point bl = unifPatches[i][(j+1)*(sqrtNumQuads+1) + k]; // bottom left
+	Point br = unifPatches[i][(j+1)*(sqrtNumQuads+1) + k + 1]; // bottom right
+	Point tr = unifPatches[i][j*(sqrtNumQuads+1) + k + 1]; // top right
+
+	// Prepare cross product for surface normal
+	std::vector<float> a(3, 0.0f);
+	std::vector<float> b(3, 0.0f);
+	a[0] = bl.x - tl.x;
+	a[1] = bl.y - tl.y;
+	a[2] = bl.z - tl.z;
+	b[0] = tr.x - tl.x;
+	b[1] = tr.y - tl.y;
+	b[2] = tr.z - tl.z;
 	
 	glBegin(GL_QUADS);
+	glNormal3f(a[1]*b[2] - a[2]*b[1],
+		   a[2]*b[0] - a[0]*b[2],
+		   a[0]*b[1] - a[1]*b[0]);
 	glVertex3f(tl.x, tl.y, tl.z); //top left
 	glVertex3f(bl.x, bl.y, bl.z); //bottom left
 	glVertex3f(br.x, br.y, br.z); //bottom right
 	glVertex3f(tr.x, tr.y, tr.z); //top right
-	//glNormal3f();
 	glEnd();
       }
     }
   }
 }
 
+/** Sets up the lights and light properties in the scene. */
+void lightSetUp() {
+
+  // defining light attributes:
+  GLfloat ambientLight[] = { 0.2f, 0.2f, 0.2f, 1.0f };
+  GLfloat diffuseLight[] = { 0.8f, 0.8f, 0.8, 1.0f };
+  GLfloat specularLight[] = { 0.5f, 0.5f, 0.5f, 1.0f };
+  GLfloat position[] = { 1.0f, 0.0f, 0.0f, 0.0f };
+  GLfloat global_ambient[] = { 0.1f, 0.1f, 0.1f };
+
+  //creating and making light0 with the above attributes:
+  glLightfv(GL_LIGHT0, GL_AMBIENT, ambientLight);
+  glLightfv(GL_LIGHT0, GL_DIFFUSE, diffuseLight);
+  glLightfv(GL_LIGHT0, GL_SPECULAR, specularLight);
+  glLightfv(GL_LIGHT0, GL_POSITION, position);
+  glLightModelfv(GL_LIGHT_MODEL_AMBIENT, global_ambient);
+
+
+  //enabling the lighting
+  glEnable(GL_LIGHTING);
+  glEnable(GL_LIGHT0);
+}
 
 
 /** Reshapes viewport if dragged and reshaped */
 void myReshape(int w, int h) {
   viewport.w = w;
   viewport.h = h;
-
   glViewport (0,0,viewport.w,viewport.h);
   // Projection matrix
   glMatrixMode(GL_PROJECTION);
   glLoadIdentity();
   glOrtho(-4, 4, -4, 4, 1, 30);
-  //gluPerspective(60, 1, 1, 30);
 }
 
 /** Simple scene initialization */
@@ -133,11 +179,17 @@ void initScene(){
   //   int width = (int) sqrt((double) unifPatches[0].size());
   //   if (i % width == 0)
   //     printf("\n");
-  //   printf(" %.2f %.2f %.2f |", unifPatches[0][i].x, unifPatches[0][i].y, unifPatches[0][i].z);
+  //   printf("%.1f %.1f %.1f|", unifPatches[0][i].x, unifPatches[0][i].y, unifPatches[0][i].z);
   // }
 
   glClearColor(0.0f, 0.0f, 0.0f, 0.0f); // Clear to black, fully transparent
   myReshape(viewport.w,viewport.h);
+
+  //Clear the depth buffer
+  glClearDepth(1);
+
+  //Enables depth testing (for lights)
+  glEnable(GL_DEPTH_TEST);
 
 }
 
@@ -232,15 +284,44 @@ void normalKeyFunc(unsigned char key, int x, int y) {
   case 32:
     exit(0);
     break;
-    // s : flat to smooth shading
+
   case 's':
+    lightSetUp();
     /*toggle flat to smooth shading */
+    if (isFlat) {
+      glShadeModel(GL_SMOOTH);
+      isFlat = false;
+    } else {
+      glShadeModel(GL_FLAT);
+      isFlat = true;
+    }
     break;
     // w : filled to wireframe
   case 'w':
-    /*toggle between filled and wirefram */
+    glDisable(GL_LIGHTING);
+    glDisable(GL_LIGHT0);
+    if (isWireframe) {
+      glPolygonMode( GL_FRONT_AND_BACK, GL_FILL );
+      isWireframe = false;
+    } else {
+      glPolygonMode( GL_FRONT_AND_BACK, GL_LINE );
+      isWireframe = true;
+    }
+    break;
+  case '+':
+    zoom += 0.1f;
+    glMatrixMode(GL_PROJECTION);
+    glLoadIdentity();
+    glOrtho(-4.0 + zoom, 4.0 - zoom, -4.0 + zoom, 4.0 - zoom, 1.0, 30.0);
+    break;
+  case '-':
+    zoom -= 0.1f;
+    glMatrixMode(GL_PROJECTION);
+    glLoadIdentity();
+    glOrtho(-4.0 + zoom, 4.0 - zoom, -4.0 + zoom, 4.0 - zoom, 1.0, 30.0);
     break;
   }
+  glutPostRedisplay();
 }
 
 
@@ -248,24 +329,45 @@ void normalKeyFunc(unsigned char key, int x, int y) {
  * SPECIALKEYFUNC method specifies the zoom, transformation.*/
 
 void specialKeyFunc(int key, int x, int y) {
-  switch(key){
-    // left arrow : rotate object
-  case GLUT_KEY_LEFT :
-    /*do object rotation */
-    break;
-    // right arrow : rotate object
-  case GLUT_KEY_RIGHT :
-    /*do object rotations */
-    break;
-    // up arrow : rotate object
-  case GLUT_KEY_UP :
-    /*do object rotations */
-    break;
-  case GLUT_KEY_DOWN :
-    /* do object rotations */
-    break;
-    
+  //if shift is pressed:
+  int gMods = glutGetModifiers();
+  if (gMods == GLUT_ACTIVE_SHIFT) {
+    switch(key){
+      // left arrow : translate object
+    case GLUT_KEY_LEFT :
+      translateX -= 0.15f;
+      break;
+      // right arrow : translate object
+    case GLUT_KEY_RIGHT :
+      translateX += 0.15f;
+      break;
+    case GLUT_KEY_UP :
+      translateY += 0.15f;
+      break;
+    case GLUT_KEY_DOWN :
+      translateY -= 0.15f;
+      break;
+      
+    }
+  } else {
+    switch(key){
+      // left arrow : rotate object
+    case GLUT_KEY_LEFT :
+      rotateY += 5.0;
+      break;
+      // right arrow : rotate object
+    case GLUT_KEY_RIGHT :
+      rotateY -= 5.0;
+      break;
+    case GLUT_KEY_UP :
+      rotateX += 5.0;
+      break;
+    case GLUT_KEY_DOWN :
+      rotateX -= 5.0;
+      break;
+    }
   }
+  glutPostRedisplay();
 }
 
 
