@@ -30,6 +30,8 @@ class Viewpoint;
 void subdividePatch (std::vector<Point> patch, float step);
 Point bezSurfacifier(std::vector<Point> bsCPoints, float u, float v);
 Point bezCurvifier(Point p0, Point p1, Point p2, Point p3, float t);
+void cameraSetUp();
+void lightSetUp();
 
 /** 3D Point class */
 class Point {
@@ -57,13 +59,27 @@ float subStep;
 std::string tesType;
 std::vector< std::vector<Point> > unifPatches; // bezier surface points
 
+//Lizzie added these for transformations//////////////////////////
+float zoom = 0.0;
+float rotateX = 0.0;
+float rotateY = 0.0;
+float translateX = 0.0;
+float translateY = 0.0;
+
+//Lizzie added for shading and wireframe modes////////////////////
+bool isWireframe;
+bool isFlat;
 
 
 
 /** Glut display method, loads identity matrix and draws */
 void myDisplay() {
+
+  lightSetUp();
+
   // Clear the color buffer
   glClear(GL_COLOR_BUFFER_BIT);
+
   // Indicate we are specifying camera transformations
   glMatrixMode(GL_MODELVIEW);
   // Zero the first transformation
@@ -77,13 +93,64 @@ void myDisplay() {
 
   }
 
+  //glPolygonMode( GL_FRONT_AND_BACK, GL_LINE );
+
+  //Camera Transformations
+  //glMatrixMode(GL_PROJECTION);
+  //glLoadIdentity();
+  //glOrtho(-1.0 + zoom, 1.0 - zoom, -1.0 + zoom, 1.0 - zoom, 1.0, -1.0);
+
+  glTranslatef(translateX, translateY, 0.0f);
+  glRotatef(rotateX, 1.0, 0.0, 0.0 );
+  glRotatef(rotateY, 0.0, 1.0, 0.0 );
+  //glScalef(zoom, zoom, zoom);////
+
+
+
+  //3d cube
+  // White side - BACK
   glBegin(GL_QUADS);
+  glColor3f(   1.0,  1.0, 1.0 );
+  glVertex3f(  0.5, -0.5, 0.5 );
+  glVertex3f(  0.5,  0.5, 0.5 );
+  glVertex3f( -0.5,  0.5, 0.5 );
+  glVertex3f( -0.5, -0.5, 0.5 );
+  glEnd();
 
-  glVertex3f( 0.0f, 0.3f, 0.0f ); //top left
-  glVertex3f( 0.0f, 0.0f, 0.0f ); //bottom left
-  glVertex3f( 0.3f, 0.0f, 0.0f ); //bottom right
-  glVertex3f( 0.3f, 0.3f, 0.0f );  //top right
+// Purple side - RIGHT
+  glBegin(GL_QUADS);
+  glColor3f(  1.0,  0.0,  1.0 );
+  glVertex3f( 0.5, -0.5, -0.5 );
+  glVertex3f( 0.5,  0.5, -0.5 );
+  glVertex3f( 0.5,  0.5,  0.5 );
+  glVertex3f( 0.5, -0.5,  0.5 );
+  glEnd();
 
+// Green side - LEFT
+  glBegin(GL_QUADS);
+  glColor3f(   0.0,  1.0,  0.0 );
+  glVertex3f( -0.5, -0.5,  0.5 );
+  glVertex3f( -0.5,  0.5,  0.5 );
+  glVertex3f( -0.5,  0.5, -0.5 );
+  glVertex3f( -0.5, -0.5, -0.5 );
+  glEnd();
+
+// Blue side - TOP
+  glBegin(GL_QUADS);
+  glColor3f(   0.0,  0.0,  1.0 );
+  glVertex3f(  0.5,  0.5,  0.5 );
+  glVertex3f(  0.5,  0.5, -0.5 );
+  glVertex3f( -0.5,  0.5, -0.5 );
+  glVertex3f( -0.5,  0.5,  0.5 );
+  glEnd();
+
+// Red side - BOTTOM
+  glBegin(GL_QUADS);
+  glColor3f(   1.0,  0.0,  0.0 );
+  glVertex3f(  0.5, -0.5, -0.5 );
+  glVertex3f(  0.5, -0.5,  0.5 );
+  glVertex3f( -0.5, -0.5,  0.5 );
+  glVertex3f( -0.5, -0.5, -0.5 );
   glEnd();
 
   
@@ -95,13 +162,52 @@ void myDisplay() {
   glutSwapBuffers();
 }
 
+/** Sets up the camera for transformations */
+void cameraSetUp() {
+  //glMatrixMode(GL_MODELVIEW);
+  //glLoadIdentity();
+  // glTranslatef(0.0f, 0.0f, zoom);
+  // glTranslatef(translateX, translateY, 0.0f);
+  // glRotatef(rotateX, 1.0, 0.0, 0.0 );
+  // glRotatef(rotateY, 0.0, 1.0, 0.0 );
+
+  glMatrixMode(GL_PROJECTION);
+
+  glOrtho(-1.0 + zoom, 1.0 - zoom, -1.0 + zoom, 1.0 - zoom, 1.0, -1.0);
+
+
+}
+
+/** Sets up the lights and light properties in the scene. */
+void LightSetUp() {
+
+  // defining light attributes:
+  GLfloat ambientLight[] = { 0.2f, 0.2f, 0.2f, 1.0f };
+  GLfloat diffuseLight[] = { 0.8f, 0.8f, 0.8, 1.0f };
+  GLfloat specularLight[] = { 0.5f, 0.5f, 0.5f, 1.0f };
+  GLfloat position[] = { 1.0f, 1.0f, 1.0f, 1.0f };
+  GLfloat global_ambient[] = { 0.1f, 0.1f, 0.1f };
+
+  //creating and making light0 with the above attributes:
+  glLightfv(GL_LIGHT0, GL_AMBIENT, ambientLight);
+  glLightfv(GL_LIGHT0, GL_DIFFUSE, diffuseLight);
+  glLightfv(GL_LIGHT0, GL_SPECULAR, specularLight);
+  glLightfv(GL_LIGHT0, GL_POSITION, position);
+  glLightModelfv(GL_LIGHT_MODEL_AMBIENT, global_ambient);
+
+
+  //enabling the lighting
+  glEnable(GL_LIGHTING);
+  glEnable(GL_LIGHT0);
+
+}
+
 
 
 /** Reshapes viewport if dragged and reshaped */
 void myReshape(int w, int h) {
   viewport.w = w;
   viewport.h = h;
-
   glViewport (0,0,viewport.w,viewport.h);
   glMatrixMode(GL_PROJECTION);
   glLoadIdentity();
@@ -114,6 +220,12 @@ void initScene(){
 
   glClearColor(0.0f, 0.0f, 0.0f, 0.0f); // Clear to black, fully transparent
   myReshape(viewport.w,viewport.h);
+
+  //Clear the depth buffer///////////////////////////////
+  glClearDepth(1);
+
+  //Enables depth testing (for lights)///////////////////////////////
+  glEnable(GL_DEPTH_TEST);
 
 }
 
@@ -202,12 +314,38 @@ void normalKeyFunc(unsigned char key, int x, int y) {
     // s : flat to smooth shading
     case 's':
       /*toggle flat to smooth shading */
+      if (isFlat) {
+        glShadeModel(GL_SMOOTH);
+        isFlat = false;
+      } else {
+        glShadeModel(GL_FLAT);
+        isFlat = true;
+      }
       break;
     // w : filled to wireframe
     case 'w':
-      /*toggle between filled and wirefram */
+      if (isWireframe) {
+        glPolygonMode( GL_FRONT_AND_BACK, GL_FILL );
+        isWireframe = false;
+      } else {
+        glPolygonMode( GL_FRONT_AND_BACK, GL_LINE );
+        isWireframe = true;
+      }
+      break;
+    case '+':
+      zoom += 0.1f;
+      glMatrixMode(GL_PROJECTION);
+      glLoadIdentity();
+      glOrtho(-1.0 + zoom, 1.0 - zoom, -1.0 + zoom, 1.0 - zoom, 1.0, -1.0);
+      break;
+    case '-':
+      zoom -= 0.1f;
+      glMatrixMode(GL_PROJECTION);
+      glLoadIdentity();
+      glOrtho(-1.0 + zoom, 1.0 - zoom, -1.0 + zoom, 1.0 - zoom, 1.0, -1.0);
       break;
     }
+    glutPostRedisplay();
 }
 
 
@@ -215,24 +353,48 @@ void normalKeyFunc(unsigned char key, int x, int y) {
  * SPECIALKEYFUNC method specifies the zoom, transformation.*/
 
 void specialKeyFunc(int key, int x, int y) {
-  switch(key){
-    // left arrow : rotate object
-    case GLUT_KEY_LEFT :
-      /*do object rotation */
-      break;
-    // right arrow : rotate object
-    case GLUT_KEY_RIGHT :
-      /*do object rotations */
-      break;
-    // up arrow : rotate object
-    case GLUT_KEY_UP :
-      /*do object rotations */
-      break;
-    case GLUT_KEY_DOWN :
-      /* do object rotations */
-      break;
-    
-    }
+  //if shift is pressed:
+  int gMods = glutGetModifiers();
+  if (gMods == GLUT_ACTIVE_SHIFT) {
+    switch(key){
+      // left arrow : rotate object
+      case GLUT_KEY_LEFT :
+        translateX -= 0.15f;
+        break;
+      // right arrow : rotate object
+      case GLUT_KEY_RIGHT :
+        translateX += 0.15f;
+        break;
+      case GLUT_KEY_UP :
+        translateY += 0.15f;
+        break;
+      case GLUT_KEY_DOWN :
+        translateY -= 0.15f;
+        break;
+      
+      }
+  } else {
+      switch(key){
+        // left arrow : rotate object
+        case GLUT_KEY_LEFT :
+          rotateY += 5.0;
+          break;
+        // right arrow : rotate object
+        case GLUT_KEY_RIGHT :
+          rotateY -= 5.0;
+          break;
+        case GLUT_KEY_UP :
+          rotateX += 5.0;
+          break;
+        case GLUT_KEY_DOWN :
+          rotateX -= 5.0;
+          break;
+        
+        }
+  }
+
+    glutPostRedisplay();
+
 }
 
 
