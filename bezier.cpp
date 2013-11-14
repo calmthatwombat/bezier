@@ -27,8 +27,8 @@ class Viewpoint;
 
 /** Method Declarations */
 void subdividePatch (std::vector<Point> patch, float step);
-Point bezSurfacifier(std::vector<Point> bsCPoints, float u, float v);
-Point bezCurvifier(Point p0, Point p1, Point p2, Point p3, float t);
+std::vector<Point> bezSurfacifier(std::vector<Point> bsCPoints, float u, float v);
+std::vector<Point> bezCurvifier(Point p0, Point p1, Point p2, Point p3, float t);
 void unifTesselator();
 void adapTesselator();
 void cameraSetUp();
@@ -57,8 +57,8 @@ Viewport viewport;
 int numPatches;
 std::vector< std::vector<Point> > patches; // control points
 float subStep;
+int sqrtNumQuads;
 std::string tesType;
-std::vector< std::vector<Point> > unifPatches; // bezier surface points
 
 float zoom = 0.0;
 float rotateX = 0.0;
@@ -68,78 +68,16 @@ float translateY = 0.0;
 
 bool isWireframe;
 bool isFlat;
-
-
-
-/** Glut display method, loads identity matrix and draws */
-void myDisplay() {
-
-  // Clear the color buffer
-  glClear(GL_COLOR_BUFFER_BIT);
-
-  // Indicate we are specifying camera transformations
-  glMatrixMode(GL_MODELVIEW);
-  // Zero the first transformation
-  glLoadIdentity();
-  // Camera
-  gluLookAt(0, 0, 5, 0, 0, 0, 0, 1, 0);
-
-  glTranslatef(translateX, translateY, 0.0f);
-  glRotatef(rotateX, 1.0, 0.0, 0.0 );
-  glRotatef(rotateY, 0.0, 1.0, 0.0 );
-  //glScalef(zoom, zoom, zoom);////
-
-  // Uniform tesselation
-  unifTesselator();
-
-  glFlush();
-  // We earlier set double buffers
-  glutSwapBuffers();
-}
-
-/** Draw uniform tesselation form */
-void unifTesselator() {
-  for (int i = 0; i < numPatches; i++) {
-    int sqrtNumQuads = sqrt(unifPatches[i].size()) - 1;
-    for (int j = 0; j < sqrtNumQuads; j++) {
-      for (int k = 0; k < sqrtNumQuads; k++) {
-	Point tl = unifPatches[i][j*(sqrtNumQuads+1) + k];	   // top left
-	Point bl = unifPatches[i][(j+1)*(sqrtNumQuads+1) + k]; // bottom left
-	Point br = unifPatches[i][(j+1)*(sqrtNumQuads+1) + k + 1]; // bottom right
-	Point tr = unifPatches[i][j*(sqrtNumQuads+1) + k + 1]; // top right
-
-	// Prepare cross product for surface normal
-	std::vector<float> a(3, 0.0f);
-	std::vector<float> b(3, 0.0f);
-	a[0] = bl.x - tl.x;
-	a[1] = bl.y - tl.y;
-	a[2] = bl.z - tl.z;
-	b[0] = tr.x - tl.x;
-	b[1] = tr.y - tl.y;
-	b[2] = tr.z - tl.z;
-	
-	glBegin(GL_QUADS);
-	glNormal3f(a[1]*b[2] - a[2]*b[1],
-		   a[2]*b[0] - a[0]*b[2],
-		   a[0]*b[1] - a[1]*b[0]);
-	glVertex3f(tl.x, tl.y, tl.z); //top left
-	glVertex3f(bl.x, bl.y, bl.z); //bottom left
-	glVertex3f(br.x, br.y, br.z); //bottom right
-	glVertex3f(tr.x, tr.y, tr.z); //top right
-	glEnd();
-      }
-    }
-  }
-}
+bool isS = 0;
 
 /** Sets up the lights and light properties in the scene. */
 void lightSetUp() {
 
   // defining light attributes:
   GLfloat ambientLight[] = { 0.2f, 0.2f, 0.2f, 1.0f };
-  GLfloat diffuseLight[] = { 0.8f, 0.8f, 0.8, 1.0f };
+  GLfloat diffuseLight[] = { 200.0f, 0.0f, 0.8f, 1.0f };
   GLfloat specularLight[] = { 0.5f, 0.5f, 0.5f, 1.0f };
-  GLfloat position[] = { 1.0f, 0.0f, 0.0f, 0.0f };
+  GLfloat position[] = {-1.0f, -1.0f, -1.0f, 0.0f};
   GLfloat global_ambient[] = { 0.1f, 0.1f, 0.1f };
 
   //creating and making light0 with the above attributes:
@@ -170,17 +108,11 @@ void myReshape(int w, int h) {
 /** Simple scene initialization */
 void initScene(){
 
-  /** Set up unifPatches only one time  */
-  for (int i = 0; i < patches.size(); i++) {
-    subdividePatch(patches[i], subStep);
+  // Set sqrtNumQuads
+  sqrtNumQuads = 0;
+  for (float i = 0; i < 1.0f; i += subStep) {
+    sqrtNumQuads++;
   }
-  
-  // for (int i = 0; i < unifPatches[0].size(); i++) {
-  //   int width = (int) sqrt((double) unifPatches[0].size());
-  //   if (i % width == 0)
-  //     printf("\n");
-  //   printf("%.1f %.1f %.1f|", unifPatches[0][i].x, unifPatches[0][i].y, unifPatches[0][i].z);
-  // }
 
   glClearColor(0.0f, 0.0f, 0.0f, 0.0f); // Clear to black, fully transparent
   myReshape(viewport.w,viewport.h);
@@ -190,60 +122,143 @@ void initScene(){
 
   //Enables depth testing (for lights)
   glEnable(GL_DEPTH_TEST);
-
 }
 
-/** Given a patch containing 16 control points, push back a patch of (numDiv + 1)**2 
- *  surface points into unifPatches vector. */
-void subdividePatch (std::vector<Point> patch, float step) {
-  // current patch
-  std::vector<Point> currPatch;
+/** Glut display method, loads identity matrix and draws */
+void myDisplay() {
+
+  // Clear the color buffer
+  glClear(GL_COLOR_BUFFER_BIT);
+
+  // Indicate we are specifying camera transformations
+  glMatrixMode(GL_MODELVIEW);
+  // Zero the first transformation
+  glLoadIdentity();
+  // Camera
+  gluLookAt(0, 0, 5, 0, 0, 0, 0, 1, 0);
+
+  glTranslatef(translateX, translateY, 0.0f);
+  glRotatef(rotateX, 1.0, 0.0, 0.0 );
+  glRotatef(rotateY, 0.0, 0.0, 1.0 );
+  //glScalef(zoom, zoom, zoom);////
+
+  // Light scene if isS
+  if (isS)
+    lightSetUp();
+
+  if (!tesType.compare("-u")) {
+    unifTesselator();
+  } else if (!tesType.compare("-a")) {
+    adapTesselator();
+  }
   
-  //setting the epsilon value:
-  const float epsilon = 0.000001;
 
-  //the parametric values u, v
-  float u;
-  float v;
+  glFlush();
+  // We earlier set double buffers
+  glutSwapBuffers();
+}
 
-  //finding the number of divisions:
-  int numDiv = ((1 + epsilon) / step);
+/** Draw uniform tesselation form */
+void unifTesselator() {
+  for (int i = 0; i < patches.size(); i++) {
+    // Draws entire patch
+    subdividePatch(patches[i], subStep);
+  }
+}
 
+/** Draw adaptive tesselation form  */
+void adapTesselator() {
+  
+}
 
-  // For each parametric value of u:
-  for (float iu = 0; iu < numDiv + 2; iu++ ) {
-    u = iu * step;
-    if (iu == numDiv + 1 || (u >= 1.0f && iu == numDiv)) {
-      iu++;
-      u = 1.0f;
-    }
-    // For each parametric value of v:
-    for (float iv = 0; iv < numDiv + 2; iv++) {
-      v = iv * step;
-      if (iv == numDiv + 1 || (v >= 1.0f && iv == numDiv)) {
-	iv++;
-	v = 1.0f;
+/** Given a patch containing 16 control points, draw entire patch after subdivision */
+void subdividePatch (std::vector<Point> patch, float step) {
+  // the parametric values u, v
+  float u, v;
+
+  for (int i = 0; i < sqrtNumQuads; i++) {
+    v = step * i;
+    for (int j = 0; j < sqrtNumQuads; j++) {
+      u = step * j;
+      std::vector<Point> tl, bl, br, tr;
+      // Top left
+      tl = bezSurfacifier(patch, u, v);
+      // Bottom left
+      if (v + step >= 1.0f) { 
+	bl = bezSurfacifier(patch, u, 1.0f);
+      } else {
+	bl = bezSurfacifier(patch, u, v + step);
       }
-      // Calculate point
-      currPatch.push_back(bezSurfacifier(patch, u, v));
+      // Bottom right
+      if (v + step >= 1.0f && u + step >= 1.0f) { 
+	br = bezSurfacifier(patch, 1.0f, 1.0f);
+      } else if (v + step >= 1.0f) {
+	br = bezSurfacifier(patch, u + step, 1.0f);
+      } else if (u + step >= 1.0f) {
+	br = bezSurfacifier(patch, 1.0f, v + step);
+      } else {
+	br = bezSurfacifier(patch, u + step, v + step);
+      }
+      // Top right
+      if (u + step >= 1.0f) { 
+	tr = bezSurfacifier(patch, 1.0f, v);
+      } else {
+	tr = bezSurfacifier(patch, u + step, v);
+      }
+      
+      glBegin(GL_QUADS);
+      glNormal3f(tl[1].x, tl[1].y, tl[1].z);
+      glVertex3f(tl[0].x, tl[0].y, tl[0].z); //top left
+      glNormal3f(bl[1].x, bl[1].y, bl[1].z);
+      glVertex3f(bl[0].x, bl[0].y, bl[0].z); //bottom left
+      glNormal3f(br[1].x, br[1].y, br[1].z);
+      glVertex3f(br[0].x, br[0].y, br[0].z); //bottom right
+      glNormal3f(tr[1].x, tr[1].y, tr[1].z);
+      glVertex3f(tr[0].x, tr[0].y, tr[0].z); //top right
+      glEnd();
     }
   }
-  // Push this patch onto unifPatches
-  unifPatches.push_back(currPatch);
+  
 }
 
 /** Create SURFACE bezier point, given u and v of bezier surface control points 
- *  bsCPoints == bezier surface Control Points */
-Point bezSurfacifier(std::vector<Point> bsCPoints, float u, float v) {
-  Point A = bezCurvifier(bsCPoints[0], bsCPoints[1], bsCPoints[2], bsCPoints[3], u);
-  Point B = bezCurvifier(bsCPoints[4], bsCPoints[5], bsCPoints[6], bsCPoints[7], u);
-  Point C = bezCurvifier(bsCPoints[8], bsCPoints[9], bsCPoints[10], bsCPoints[11], u);
-  Point D = bezCurvifier(bsCPoints[12], bsCPoints[13], bsCPoints[14], bsCPoints[15], u);
-  return bezCurvifier(A, B, C, D, v);
+ *  bsCPoints == bezier surface Control Points
+ *  Returns size-2 vector, 2nd of which is the vertex normal */
+std::vector<Point> bezSurfacifier(std::vector<Point> bsCPoints, float u, float v) {
+  // u bez-curve
+  Point A = bezCurvifier(bsCPoints[0], bsCPoints[1], bsCPoints[2], bsCPoints[3], u)[0];
+  Point B = bezCurvifier(bsCPoints[4], bsCPoints[5], bsCPoints[6], bsCPoints[7], u)[0];
+  Point C = bezCurvifier(bsCPoints[8], bsCPoints[9], bsCPoints[10], bsCPoints[11], u)[0];
+  Point D = bezCurvifier(bsCPoints[12], bsCPoints[13], bsCPoints[14], bsCPoints[15], u)[0];
+  // v bez-curve
+  Point E = bezCurvifier(bsCPoints[0], bsCPoints[4], bsCPoints[8], bsCPoints[12], v)[0];
+  Point F = bezCurvifier(bsCPoints[1], bsCPoints[5], bsCPoints[9], bsCPoints[13], v)[0];
+  Point G = bezCurvifier(bsCPoints[2], bsCPoints[6], bsCPoints[10], bsCPoints[14], v)[0];
+  Point H = bezCurvifier(bsCPoints[3], bsCPoints[7], bsCPoints[11], bsCPoints[15], v)[0];
+  // (point, dP/dv) tuple
+  std::vector<Point> vCurve = bezCurvifier(A, B, C, D, v);
+  // (point, dP/du) tuple
+  std::vector<Point> uCurve = bezCurvifier(E, F, G, H, u);
+
+  // Normalized normal
+  Point normal(uCurve[1].y*vCurve[1].z - uCurve[1].z*vCurve[1].y, 
+	       uCurve[1].z*vCurve[1].x - uCurve[1].x*vCurve[1].z,
+	       uCurve[1].x*vCurve[1].y - uCurve[1].y*vCurve[1].x);
+  float mag = sqrt(pow(normal.x, 2) + pow(normal.y, 2) + pow(normal.z, 2));
+  normal.x = normal.x / mag;
+  normal.y = normal.y / mag;
+  normal.z = normal.z / mag;
+  
+
+  // Result tuple (point, normal)
+  std::vector<Point> result;
+  result.push_back(vCurve[0]);
+  result.push_back(normal);
+  return result;
 }
 
 /** Create CURVE bezier point, given u and v of bezier curve control points */
-Point bezCurvifier(Point p0, Point p1, Point p2, Point p3, float t) {
+std::vector<Point> bezCurvifier(Point p0, Point p1, Point p2, Point p3, float t) {
   // Order matters
   Point A(p0.x * (1.0 - t) + p1.x * t,
           p0.y * (1.0 - t) + p1.y * t,
@@ -266,11 +281,22 @@ Point bezCurvifier(Point p0, Point p1, Point p2, Point p3, float t) {
           B.y * (1.0 - t) + C.y * t,
           B.z * (1.0 - t) + C.z * t);
 
-  //Finally, picking the right point on DE:
+  // Pick the right point on DE:
   Point finalP(D.x * (1.0 - t) + E.x * t,
 	       D.y * (1.0 - t) + E.y * t,
 	       D.z * (1.0 - t) + E.z * t);
-  return finalP;
+
+  // Find dP/dt
+  Point dPdt(3 * (E.x - D.x), 
+	     3 * (E.y - D.y), 
+	     3 * (E.z - D.z));
+
+  // Result
+  std::vector<Point> result;
+  result.push_back(finalP);
+  result.push_back(dPdt);
+
+  return result;
 }
 
 
@@ -286,6 +312,7 @@ void normalKeyFunc(unsigned char key, int x, int y) {
     break;
 
   case 's':
+    isS = true;
     lightSetUp();
     /*toggle flat to smooth shading */
     if (isFlat) {
@@ -298,6 +325,7 @@ void normalKeyFunc(unsigned char key, int x, int y) {
     break;
     // w : filled to wireframe
   case 'w':
+    isS = false;
     glDisable(GL_LIGHTING);
     glDisable(GL_LIGHT0);
     if (isWireframe) {
