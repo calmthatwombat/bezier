@@ -127,6 +127,7 @@ void initScene(){
 /** Glut display method, loads identity matrix and draws */
 void myDisplay() {
 
+
   // Clear the color buffer
   glClear(GL_COLOR_BUFFER_BIT);
 
