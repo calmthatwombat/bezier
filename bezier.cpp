@@ -26,7 +26,11 @@ class Point;
 class Viewpoint;
 
 /** Method Declarations */
-void subdividePatch (std::vector<Point> patch, float step);
+void unifSubdividePatch(std::vector<Point> patch, float step);
+void adapSubdividePatch(std::vector<Point> patch, std::vector<Point> pt1, 
+			std::vector<Point> pt2, std::vector<Point> pt3, float u1, 
+			float v1, float u2, float v2, float u3, float v3, 
+			float tolerance);
 std::vector<Point> bezSurfacifier(std::vector<Point> bsCPoints, float u, float v);
 std::vector<Point> bezCurvifier(Point p0, Point p1, Point p2, Point p3, float t);
 void unifTesselator();
@@ -74,10 +78,10 @@ bool isS = 0;
 void lightSetUp() {
 
   // defining light attributes:
-  GLfloat ambientLight[] = { 0.2f, 0.2f, 0.2f, 1.0f };
-  GLfloat diffuseLight[] = { 200.0f, 0.0f, 0.8f, 1.0f };
+  GLfloat ambientLight[] = { 0.0f, 0.0f, 0.0f, 1.0f };
+  GLfloat diffuseLight[] = { 0.9f, 0.9f, 0.9f, 1.0f };
   GLfloat specularLight[] = { 0.5f, 0.5f, 0.5f, 1.0f };
-  GLfloat position[] = {-1.0f, -1.0f, -1.0f, 0.0f};
+  GLfloat position[] = {1.0f, 1.0f, 1.0f, 0.0f};
   GLfloat global_ambient[] = { 0.1f, 0.1f, 0.1f };
 
   //creating and making light0 with the above attributes:
@@ -102,7 +106,7 @@ void myReshape(int w, int h) {
   // Projection matrix
   glMatrixMode(GL_PROJECTION);
   glLoadIdentity();
-  glOrtho(-4, 4, -4, 4, 1, 30);
+  glOrtho(-4, 4, -4, 4, 2, 20);
 }
 
 /** Simple scene initialization */
@@ -128,7 +132,7 @@ void initScene(){
 void myDisplay() {
 
   // Clear the color buffer
-  glClear(GL_COLOR_BUFFER_BIT);
+  glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
   // Indicate we are specifying camera transformations
   glMatrixMode(GL_MODELVIEW);
@@ -137,21 +141,24 @@ void myDisplay() {
   // Camera
   gluLookAt(0, 0, 5, 0, 0, 0, 0, 1, 0);
 
-  glTranslatef(translateX, translateY, 0.0f);
-  glRotatef(rotateX, 1.0, 0.0, 0.0 );
-  glRotatef(rotateY, 0.0, 0.0, 1.0 );
+
   //glScalef(zoom, zoom, zoom);////
 
   // Light scene if isS
   if (isS)
     lightSetUp();
 
+  glPushMatrix();
+  glTranslatef(translateX, translateY, 0.0f);
+  glRotatef(rotateX, 1.0, 0.0, 0.0 );
+  glRotatef(rotateY, 0.0, 0.0, 1.0 );
   if (!tesType.compare("-u")) {
     unifTesselator();
   } else if (!tesType.compare("-a")) {
     adapTesselator();
   }
-  
+
+  glPopMatrix();
 
   glFlush();
   // We earlier set double buffers
@@ -161,18 +168,121 @@ void myDisplay() {
 /** Draw uniform tesselation form */
 void unifTesselator() {
   for (int i = 0; i < patches.size(); i++) {
-    // Draws entire patch
-    subdividePatch(patches[i], subStep);
+    // Draws entire patch uniformly
+    unifSubdividePatch(patches[i], subStep);
   }
 }
 
 /** Draw adaptive tesselation form  */
 void adapTesselator() {
-  
+  for (int i = 0; i < patches.size(); i++) {
+    // Set up initial recursion case
+    std::vector<Point> tl, bl, br, tr;
+    tl = bezSurfacifier(patches[i], 0.0f, 0.0f);
+    bl = bezSurfacifier(patches[i], 0.0f, 1.0f);
+    br = bezSurfacifier(patches[i], 1.0f, 1.0f);
+    tr = bezSurfacifier(patches[i], 1.0f, 0.0f);
+    // Draws entire patch adaptively
+    adapSubdividePatch(patches[i], tl, bl, tr, 0.0f, 0.0f, 0.0f, 1.0f, 1.0f, 0.0f, 
+		       subStep);
+    adapSubdividePatch(patches[i], tr, bl, br, 1.0f, 0.0f, 0.0f, 1.0f, 1.0f, 1.0f, 
+		       subStep);
+  }
 }
 
-/** Given a patch containing 16 control points, draw entire patch after subdivision */
-void subdividePatch (std::vector<Point> patch, float step) {
+/** Given a triangle and their respective u v coords, recursively resize triangles
+ *  adaptively. */
+void adapSubdividePatch(std::vector<Point> patch, std::vector<Point> pt1, 
+			std::vector<Point> pt2, std::vector<Point> pt3, float u1, 
+			float v1, float u2, float v2, float u3, float v3, 
+			float tolerance) {
+  // Midpoint primitive points
+  Point pp12((pt1[0].x + pt2[0].x)/2, (pt1[0].y + pt2[0].y)/2, 
+	     (pt1[0].z + pt2[0].z)/2);
+  Point pp23((pt2[0].x + pt3[0].x)/2, (pt2[0].y + pt3[0].y)/2, 
+	     (pt2[0].z + pt3[0].z)/2);
+  Point pp31((pt3[0].x + pt1[0].x)/2, (pt3[0].y + pt1[0].y)/2, 
+	     (pt3[0].z + pt1[0].z)/2);
+  // Midpoint u and v
+  float u12 = (u1 + u2)/2;
+  float v12 = (v1 + v2)/2;
+  float u23 = (u2 + u3)/2;
+  float v23 = (v2 + v3)/2;
+  float u31 = (u3 + u1)/2;
+  float v31 = (v3 + v1)/2;
+  // Midpoint bezier surface points (bsp)
+  std::vector<Point> bsp12 = bezSurfacifier(patch, u12, v12);
+  std::vector<Point> bsp23 = bezSurfacifier(patch, u23, v23);
+  std::vector<Point> bsp31 = bezSurfacifier(patch, u31, v31);
+  
+  // Calculate distances
+  float d12 = sqrt(pow(pp12.x - bsp12[0].x, 2) + 
+		   pow(pp12.y - bsp12[0].y, 2) +
+		   pow(pp12.z - bsp12[0].z, 2));
+  float d23 = sqrt(pow(pp23.x - bsp23[0].x, 2) + 
+		   pow(pp23.y - bsp23[0].y, 2) + 
+		   pow(pp23.z - bsp23[0].z, 2));
+  float d31 = sqrt(pow(pp31.x - bsp31[0].x, 2) + 
+		   pow(pp31.y - bsp31[0].y, 2) + 
+		   pow(pp31.z - bsp31[0].z, 2));
+  // Pass tolerance test
+  int isPass12 = (d12 <= tolerance);
+  int isPass23 = (d23 <= tolerance);
+  int isPass31 = (d31 <= tolerance);
+
+  // Case handling for recursion
+  if (isPass12 && isPass23 && isPass31) {
+    glBegin(GL_TRIANGLES);
+    // Top left
+    glNormal3f(pt1[1].x, pt1[1].y, pt1[1].z);
+    glVertex3f(pt1[0].x, pt1[0].y, pt1[0].z);
+    // Bottom left
+    glNormal3f(pt2[1].x, pt2[1].y, pt2[1].z);
+    glVertex3f(pt2[0].x, pt2[0].y, pt2[0].z);
+    // Top right
+    glNormal3f(pt3[1].x, pt3[1].y, pt3[1].z);
+    glVertex3f(pt3[0].x, pt3[0].y, pt3[0].z);
+    glEnd();
+  } else if (isPass12 && isPass23) {
+    // isPass31 fails
+    adapSubdividePatch(patch, bsp31, pt1, pt2, u31, v31, u1, v1, u2, v2, subStep);
+    adapSubdividePatch(patch, bsp31, pt2, pt3, u31, v31, u2, v2, u3, v3, subStep);    
+  } else if (isPass23 && isPass31) {
+    // isPass12 fails
+    adapSubdividePatch(patch, bsp12, pt2, pt3, u12, v12, u2, v2, u3, v3, subStep);
+    adapSubdividePatch(patch, bsp12, pt3, pt1, u12, v12, u3, v3, u1, v1, subStep);    
+  } else if (isPass12 && isPass31) {
+    // isPass23 fails
+    adapSubdividePatch(patch, bsp23, pt3, pt1, u23, v23, u3, v3, u1, v1, subStep);
+    adapSubdividePatch(patch, bsp23, pt1, pt2, u23, v23, u1, v1, u2, v2, subStep);    
+  } else if (isPass12) {
+    // isPass23 and isPass31 fail
+    adapSubdividePatch(patch, bsp23, pt1, pt2, u23, v23, u1, v1, u2, v2, subStep);
+    adapSubdividePatch(patch, bsp23, bsp31, pt1, u23, v23, u31, v31, u1, v1, subStep);
+    adapSubdividePatch(patch, bsp23, pt3, bsp31, u23, v23, u3, v3, u31, v31, subStep);
+  } else if (isPass23) {
+    // isPass12 and isPass31 fail
+    adapSubdividePatch(patch, bsp31, pt2, pt3, u31, v31, u2, v2, u3, v3, subStep);
+    adapSubdividePatch(patch, bsp31, bsp12, pt2, u31, v31, u12, v12, u2, v2, subStep);
+    adapSubdividePatch(patch, bsp31, pt1, bsp12, u31, v31, u1, v1, u12, v12, subStep);
+  } else if (isPass31) {
+    // isPass12 and isPass23 fail
+    adapSubdividePatch(patch, bsp12, pt3, pt1, u12, v12, u3, v3, u1, v1, subStep);
+    adapSubdividePatch(patch, bsp12, bsp23, pt3, u12, v12, u23, v23, u3, v3, subStep);
+    adapSubdividePatch(patch, bsp12, pt2, bsp23, u12, v12, u2, v2, u23, v23, subStep);
+  } else {
+    // All fail
+    adapSubdividePatch(patch, pt1, bsp12, bsp31, u1, v1, u12, v12, u31, v31, subStep);
+    adapSubdividePatch(patch, pt2, bsp23, bsp12, u2, v2, u23, v23, u12, v12, subStep);
+    adapSubdividePatch(patch, pt3, bsp31, bsp23, u3, v3, u31, v31, u23, v23, subStep);
+    adapSubdividePatch(patch, bsp12, bsp23, bsp31, u12, v12, u23, v23, u31, v31, 
+		       subStep);
+  }
+}
+
+/** Given a patch containing 16 control points, draw entire patch after uniform
+ *  subdivision */
+void unifSubdividePatch (std::vector<Point> patch, float step) {
   // the parametric values u, v
   float u, v;
 
@@ -467,7 +577,7 @@ int main(int argc, char *argv[]) {
   glutInit(&argc, argv);
 
   // Double buffered window with RGB channels
-  glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGB);
+  glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGB | GLUT_DEPTH);
 
   // Initalize the viewport size
   viewport.w = 800;
