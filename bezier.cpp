@@ -178,6 +178,22 @@ void unifTesselator() {
       // Draws entire patch uniformly
       unifSubdividePatch(patches[i], subStep);
     }
+    if (bigPatches.size() == 0) {
+      for (int i = 0; i < patches.size(); i++) {
+        // Draws entire patch uniformly
+        unifSubdividePatch(patches[i], subStep);
+      }
+    } else {
+      for (int p = 0; p < bigPatches.size(); p++) {
+        std::vector< std::vector<Point> > patches = bigPatches[p];
+        for (int i = 0; i < patches.size(); i++) {
+          // Draws entire patch uniformly
+          unifSubdividePatch(patches[i], subStep);
+	}
+      }
+
+    }
+
   }
 
 }
@@ -199,7 +215,41 @@ void adapTesselator() {
       adapSubdividePatch(patches[i], tr, bl, br, 1.0f, 0.0f, 0.0f, 1.0f, 1.0f, 1.0f, 
 			 subStep);
     }
+    if (bigPatches.size() == 0) {
+      for (int i = 0; i < patches.size(); i++) {
+	// Set up initial recursion case
+	std::vector<Point> tl, bl, br, tr;
+	tl = bezSurfacifier(patches[i], 0.0f, 0.0f);
+	bl = bezSurfacifier(patches[i], 0.0f, 1.0f);
+	br = bezSurfacifier(patches[i], 1.0f, 1.0f);
+	tr = bezSurfacifier(patches[i], 1.0f, 0.0f);
+	// Draws entire patch adaptively
+	adapSubdividePatch(patches[i], tl, bl, tr, 0.0f, 0.0f, 0.0f, 1.0f, 1.0f, 0.0f, 
+			   subStep);
+	adapSubdividePatch(patches[i], tr, bl, br, 1.0f, 0.0f, 0.0f, 1.0f, 1.0f, 1.0f, 
+			   subStep);
+      }
 
+    } else {
+      for (int p = 0; p < bigPatches.size(); p++) {
+	std::vector< std::vector<Point> > patches = bigPatches[p];
+	for (int i = 0; i < patches.size(); i++) {
+	  // Set up initial recursion case
+	  std::vector<Point> tl, bl, br, tr;
+	  tl = bezSurfacifier(patches[i], 0.0f, 0.0f);
+	  bl = bezSurfacifier(patches[i], 0.0f, 1.0f);
+	  br = bezSurfacifier(patches[i], 1.0f, 1.0f);
+	  tr = bezSurfacifier(patches[i], 1.0f, 0.0f);
+	  // Draws entire patch adaptively
+	  adapSubdividePatch(patches[i], tl, bl, tr, 0.0f, 0.0f, 0.0f, 1.0f, 1.0f, 0.0f, 
+			     subStep);
+	  adapSubdividePatch(patches[i], tr, bl, br, 1.0f, 0.0f, 0.0f, 1.0f, 1.0f, 1.0f, 
+			     subStep);
+	}
+
+      }
+
+    }
   }
 
 }
@@ -385,25 +435,25 @@ std::vector<Point> bezSurfacifier(std::vector<Point> bsCPoints, float u, float v
 std::vector<Point> bezCurvifier(Point p0, Point p1, Point p2, Point p3, float t) {
   // Order matters
   Point A(p0.x * (1.0 - t) + p1.x * t,
-          p0.y * (1.0 - t) + p1.y * t,
-          p0.z * (1.0 - t) + p1.z * t);
+	  p0.y * (1.0 - t) + p1.y * t,
+	  p0.z * (1.0 - t) + p1.z * t);
 
   Point B(p1.x * (1.0 - t) + p2.x * t,
-          p1.y * (1.0 - t) + p2.y * t,
-          p1.z * (1.0 - t) + p2.z * t);
+	  p1.y * (1.0 - t) + p2.y * t,
+	  p1.z * (1.0 - t) + p2.z * t);
 
   Point C(p2.x * (1.0 - t) + p3.x * t,
-          p2.y * (1.0 - t) + p3.y * t,
-          p2.z * (1.0 - t) + p3.z * t);
+	  p2.y * (1.0 - t) + p3.y * t,
+	  p2.z * (1.0 - t) + p3.z * t);
 
   //Now, split AB and BC to form a new segment DE:
   Point D(A.x * (1.0 - t) + B.x * t,
-          A.y * (1.0 - t) + B.y * t,
-          A.z * (1.0 - t) + B.z * t);
+	  A.y * (1.0 - t) + B.y * t,
+	  A.z * (1.0 - t) + B.z * t);
 
   Point E(B.x * (1.0 - t) + C.x * t,
-          B.y * (1.0 - t) + C.y * t,
-          B.z * (1.0 - t) + C.z * t);
+	  B.y * (1.0 - t) + C.y * t,
+	  B.z * (1.0 - t) + C.z * t);
 
   // Pick the right point on DE:
   Point finalP(D.x * (1.0 - t) + E.x * t,
@@ -547,20 +597,20 @@ int main(int argc, char *argv[]) {
       std::stringstream ss(line);
 
       while (ss >> buf) { 
-        splitline.push_back(buf); 
+	splitline.push_back(buf); 
       }
 
 
       // Ignore blank lines 
       if(splitline.size() == 0) { 
-        continue;  
+	continue;  
       } 
       if (splitline.size() == 1) { 
 	numPatches.push_back(atoi(splitline[0].c_str())); 
 	continue;
-        //in the .scene file, each object is separated by a '# #'
-        //so the '# #' is parsed, the patches for the object is added
-        //to bigPatches, and patches gets cleared
+	//in the .scene file, each object is separated by a '# #'
+	//so the '# #' is parsed, the patches for the object is added
+	//to bigPatches, and patches gets cleared
       } else if(splitline.size() == 2) {
 	bigPatches.push_back(patches);
 	patches.clear();
