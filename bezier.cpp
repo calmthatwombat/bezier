@@ -33,8 +33,8 @@ void adapSubdividePatch(std::vector<Point> patch, std::vector<Point> pt1,
 			float tolerance);
 std::vector<Point> bezSurfacifier(std::vector<Point> bsCPoints, float u, float v);
 std::vector<Point> bezCurvifier(Point p0, Point p1, Point p2, Point p3, float t);
-void unifTesselator();
-void adapTesselator();
+void unifTesselator(std::vector< std::vector<Point> > &patchSet);
+void adapTesselator(std::vector< std::vector<Point> > &patchSet);
 void cameraSetUp();
 void lightSetUp();
 
@@ -65,16 +65,17 @@ std::vector< std::vector<Point> > patches;
 std::vector< std::vector< std::vector<Point> > > bigPatches;
 float subStep;
 int sqrtNumQuads;
+int objectNo = 0;
 std::string tesType;
 
 float zoom = 0.0;
-float rotateX = 0.0;
-float rotateY = 0.0;
-float translateX = 0.0;
-float translateY = 0.0;
+
+std::vector<float> transformations;
 
 bool isWireframe;
 bool isFlat;
+bool isH = false;
+bool isHidden = false;
 bool isS = 0;
 
 /** Sets up the lights and light properties in the scene. */
@@ -108,7 +109,7 @@ void myReshape(int w, int h) {
   // Projection matrix
   glMatrixMode(GL_PROJECTION);
   glLoadIdentity();
-  glOrtho(-4, 4, -4, 4, 2, 20);
+  glOrtho(-4, 4, -4, 4, 1.0, 30);
 }
 
 /** Simple scene initialization */
@@ -145,24 +146,79 @@ void myDisplay() {
   gluLookAt(0, 0, 5, 0, 0, 0, 0, 1, 0);
 
 
-  //glScalef(zoom, zoom, zoom);////
-
   // Light scene if isS
   if (isS)
     lightSetUp();
 
-  glPushMatrix();
-  glTranslatef(translateX, translateY, 0.0f);
-  glRotatef(rotateX, 1.0, 0.0, 0.0 );
-  glRotatef(rotateY, 0.0, 0.0, 1.0 );
-  
-  if (!tesType.compare("-u")) {
-    unifTesselator();
-  } else if (!tesType.compare("-a")) {
-    adapTesselator();
-  }
+  // DRAW EVERYTHING!!
+  for (int i = 0; i < bigPatches.size(); i++) {
+    // Hidden line removal (will need to draw twice)
+    if (isH) {
+      if (isHidden) {
+	glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+	glColor3f(1.0f,1.0f,1.0f);
+      
+	// 1st draw
+	glPushMatrix();
+	glTranslatef(transformations[4*i], transformations[4*i + 1], 0.0f);
+	glRotatef(transformations[4*i + 2], 0.0, 1.0, 0.0 );
+	glRotatef(transformations[4*i + 3], 1.0, 0.0, 0.0 );
+	if (!tesType.compare("-u")) {
+	  unifTesselator(bigPatches[i]);
+	} else if (!tesType.compare("-a")) {
+	  adapTesselator(bigPatches[i]);
+	}
+	glPopMatrix();
 
-  glPopMatrix();
+	glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+	glEnable(GL_POLYGON_OFFSET_FILL);
+	glPolygonOffset(1.0, 1.0);
+	glColor3f(0.0f,0.0f,0.0f);
+	// 2nd draw
+	glPushMatrix();
+	glTranslatef(transformations[4*i], transformations[4*i + 1], 0.0f);
+	glRotatef(transformations[4*i + 2], 0.0, 1.0, 0.0 );
+	glRotatef(transformations[4*i + 3], 1.0, 0.0, 0.0 );
+	if (!tesType.compare("-u")) {
+	  unifTesselator(bigPatches[i]);
+	} else if (!tesType.compare("-a")) {
+	  adapTesselator(bigPatches[i]);
+	}
+	glPopMatrix();
+	glDisable(GL_POLYGON_OFFSET_FILL);
+      } else {
+	// 'h' active but filled
+	glPolygonMode( GL_FRONT_AND_BACK, GL_FILL );
+	glColor3f(1.0f,1.0f,1.0f);
+	glPushMatrix();
+	glTranslatef(transformations[4*i], transformations[4*i + 1], 0.0f);
+	glRotatef(transformations[4*i + 2], 0.0, 1.0, 0.0 );
+	glRotatef(transformations[4*i + 3], 1.0, 0.0, 0.0 );
+	if (!tesType.compare("-u")) {
+	  unifTesselator(bigPatches[i]);
+	} else if (!tesType.compare("-a")) {
+	  adapTesselator(bigPatches[i]);
+	}
+	glPopMatrix();
+      }
+      
+    }
+
+
+    glPushMatrix();
+    glTranslatef(transformations[4*i], transformations[4*i + 1], 0.0f);
+    glRotatef(transformations[4*i + 2], 0.0, 1.0, 0.0 );
+    glRotatef(transformations[4*i + 3], 1.0, 0.0, 0.0 );
+  
+    if (!tesType.compare("-u")) {
+      unifTesselator(bigPatches[i]);
+    } else if (!tesType.compare("-a")) {
+      adapTesselator(bigPatches[i]);
+    }
+
+    glPopMatrix();
+
+  }
 
   glFlush();
   // We earlier set double buffers
@@ -170,65 +226,28 @@ void myDisplay() {
 }
 
 /** Draw uniform tesselation form */
-void unifTesselator() {
-  if (bigPatches.size() == 0) {
-    for (int i = 0; i < patches.size(); i++) {
-      // Draws entire patch uniformly
-      unifSubdividePatch(patches[i], subStep);
-    }
-  } else {
-    for (int p = 0; p < bigPatches.size(); p++) {
-      std::vector< std::vector<Point> > patches = bigPatches[p];
-      for (int i = 0; i < patches.size(); i++) {
-	// Draws entire patch uniformly
-	unifSubdividePatch(patches[i], subStep);
-      }
-    }
-
+void unifTesselator(std::vector< std::vector<Point> > &patchSet) {
+  for (int i = 0; i < patchSet.size(); i++) {
+    // Draws entire patch uniformly
+    unifSubdividePatch(patchSet[i], subStep);
   }
-
-
 }
 
 /** Draw adaptive tesselation form */
-void adapTesselator() {
-  if (bigPatches.size() == 0) {
-    for (int i = 0; i < patches.size(); i++) {
-      // Set up initial recursion case
-      std::vector<Point> tl, bl, br, tr;
-      tl = bezSurfacifier(patches[i], 0.0f, 0.0f);
-      bl = bezSurfacifier(patches[i], 0.0f, 1.0f);
-      br = bezSurfacifier(patches[i], 1.0f, 1.0f);
-      tr = bezSurfacifier(patches[i], 1.0f, 0.0f);
-      // Draws entire patch adaptively
-      adapSubdividePatch(patches[i], tl, bl, tr, 0.0f, 0.0f, 0.0f, 1.0f, 1.0f, 0.0f,
-			 subStep);
-      adapSubdividePatch(patches[i], tr, bl, br, 1.0f, 0.0f, 0.0f, 1.0f, 1.0f, 1.0f,
-			 subStep);
-    }
-
-  } else {
-    for (int p = 0; p < bigPatches.size(); p++) {
-      std::vector< std::vector<Point> > patches = bigPatches[p];
-      for (int i = 0; i < patches.size(); i++) {
-        // Set up initial recursion case
-        std::vector<Point> tl, bl, br, tr;
-        tl = bezSurfacifier(patches[i], 0.0f, 0.0f);
-        bl = bezSurfacifier(patches[i], 0.0f, 1.0f);
-        br = bezSurfacifier(patches[i], 1.0f, 1.0f);
-        tr = bezSurfacifier(patches[i], 1.0f, 0.0f);
-        // Draws entire patch adaptively
-        adapSubdividePatch(patches[i], tl, bl, tr, 0.0f, 0.0f, 0.0f, 1.0f, 1.0f, 0.0f,
-			   subStep);
-        adapSubdividePatch(patches[i], tr, bl, br, 1.0f, 0.0f, 0.0f, 1.0f, 1.0f, 1.0f,
-			   subStep);
-      }
-
-    }
-
+void adapTesselator(std::vector< std::vector<Point> > &patchSet) {
+  for (int i = 0; i < patchSet.size(); i++) {
+    // Set up initial recursion case
+    std::vector<Point> tl, bl, br, tr;
+    tl = bezSurfacifier(patchSet[i], 0.0f, 0.0f);
+    bl = bezSurfacifier(patchSet[i], 0.0f, 1.0f);
+    br = bezSurfacifier(patchSet[i], 1.0f, 1.0f);
+    tr = bezSurfacifier(patchSet[i], 1.0f, 0.0f);
+    // Draws entire patch adaptively
+    adapSubdividePatch(patchSet[i], tl, bl, tr, 0.0f, 0.0f, 0.0f, 1.0f, 1.0f, 0.0f,
+		       subStep);
+    adapSubdividePatch(patchSet[i], tr, bl, br, 1.0f, 0.0f, 0.0f, 1.0f, 1.0f, 1.0f,
+		       subStep);
   }
-
-
 }
 
 /** Given a triangle and their respective u v coords, recursively resize triangles
@@ -462,7 +481,24 @@ void normalKeyFunc(unsigned char key, int x, int y) {
     exit(0);
     break;
 
+    // iterate objects for multiple transformations
+  case 'a':
+    objectNo++;
+    if (objectNo == bigPatches.size())
+      objectNo = 0;
+    break;
+
+  case 'h':
+    if (!isHidden || isH == false) {
+      isHidden = true;
+    } else {
+      isHidden = false;
+    }
+    isH = true;
+    break;
+
   case 's':
+    isH = false;
     isS = true;
     lightSetUp();
     /*toggle flat to smooth shading */
@@ -476,6 +512,9 @@ void normalKeyFunc(unsigned char key, int x, int y) {
     break;
     // w : filled to wireframe
   case 'w':
+    isH = false;
+    // Reset to white
+    glColor3f(1.0f,1.0f,1.0f);
     isS = false;
     glDisable(GL_LIGHTING);
     glDisable(GL_LIGHT0);
@@ -514,17 +553,17 @@ void specialKeyFunc(int key, int x, int y) {
     switch(key){
       // left arrow : translate object
     case GLUT_KEY_LEFT :
-      translateX -= 0.15f;
+      transformations[4*objectNo + 0] -= 0.15f;
       break;
       // right arrow : translate object
     case GLUT_KEY_RIGHT :
-      translateX += 0.15f;
+      transformations[4*objectNo + 0] += 0.15f;
       break;
     case GLUT_KEY_UP :
-      translateY += 0.15f;
+      transformations[4*objectNo + 1] += 0.15f;
       break;
     case GLUT_KEY_DOWN :
-      translateY -= 0.15f;
+      transformations[4*objectNo + 1] -= 0.15f;
       break;
       
     }
@@ -532,17 +571,17 @@ void specialKeyFunc(int key, int x, int y) {
     switch(key){
       // left arrow : rotate object
     case GLUT_KEY_LEFT :
-      rotateY += 5.0;
+      transformations[4*objectNo + 2] += 5.0;
       break;
       // right arrow : rotate object
     case GLUT_KEY_RIGHT :
-      rotateY -= 5.0;
+      transformations[4*objectNo + 2] -= 5.0;
       break;
     case GLUT_KEY_UP :
-      rotateX += 5.0;
+      transformations[4*objectNo + 3] += 5.0;
       break;
     case GLUT_KEY_DOWN :
-      rotateX -= 5.0;
+      transformations[4*objectNo + 3] -= 5.0;
       break;
     }
   }
@@ -622,14 +661,16 @@ int main(int argc, char *argv[]) {
     inpfile.close();
   }
 
-  for (int i = 0; i < patches.size(); i++) {
-    printf("\n");
-    for (int j = 0; j < 16; j+= 4) {
-      printf("\n");
-      for (int k = 3; k >= 0; k--) {
-	printf("%.3f %.3f %.3f  ", patches[i][j + k].x, patches[i][j+k].y, patches[i][j+k].z);
-      }
-    }
+  // Put single bez into bigPatches for consistency
+  if (bigPatches.size() == 0)
+    bigPatches.push_back(patches);
+
+  // Set up transformations size
+  for (int i = 0; i < bigPatches.size(); i++) {
+    transformations.push_back(0.0f);
+    transformations.push_back(0.0f);
+    transformations.push_back(0.0f);
+    transformations.push_back(0.0f);
   }
   
 
