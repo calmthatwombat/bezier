@@ -204,7 +204,6 @@ void myDisplay() {
       
     }
 
-
     glPushMatrix();
     glTranslatef(transformations[4*i], transformations[4*i + 1], 0.0f);
     glRotatef(transformations[4*i + 2], 0.0, 1.0, 0.0 );
@@ -489,6 +488,9 @@ void normalKeyFunc(unsigned char key, int x, int y) {
     break;
 
   case 'h':
+    isS = false;
+    glDisable(GL_LIGHTING);
+    glDisable(GL_LIGHT0);
     if (!isHidden || isH == false) {
       isHidden = true;
     } else {
