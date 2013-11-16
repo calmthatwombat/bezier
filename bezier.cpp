@@ -106,7 +106,7 @@ void myReshape(int w, int h) {
   // Projection matrix
   glMatrixMode(GL_PROJECTION);
   glLoadIdentity();
-  glOrtho(-4, 4, -4, 4, 2, 20);
+  glOrtho(-5.0, 5.0, -5.0, 5.0, 1, 30);
 }
 
 /** Simple scene initialization */
@@ -450,13 +450,13 @@ void normalKeyFunc(unsigned char key, int x, int y) {
     zoom += 0.1f;
     glMatrixMode(GL_PROJECTION);
     glLoadIdentity();
-    glOrtho(-4.0 + zoom, 4.0 - zoom, -4.0 + zoom, 4.0 - zoom, 1.0, 30.0);
+    glOrtho(-5.0 + zoom, 5.0 - zoom, -5.0 + zoom, 5.0 - zoom, 1.0, 30.0);
     break;
   case '-':
     zoom -= 0.1f;
     glMatrixMode(GL_PROJECTION);
     glLoadIdentity();
-    glOrtho(-4.0 + zoom, 4.0 - zoom, -4.0 + zoom, 4.0 - zoom, 1.0, 30.0);
+    glOrtho(-5.0 + zoom, 5.0 - zoom, -5.0 + zoom, 5.0 - zoom, 1.0, 30.0);
     break;
   }
   glutPostRedisplay();
@@ -515,8 +515,8 @@ int main(int argc, char *argv[]) {
   // Parsing command line for: input file name, the subdivision paramter, and
   // the flag which determines if subdivision should be adaptive or uniform:
   std::string file = std::string(argv[1]);
-  subStep = atof(argv[2]);
   tesType = std::string(argv[3]);
+  subStep = atof(argv[2]);
 
   std::ifstream inpfile(file.c_str()); 
   if(!inpfile.is_open()) { 
