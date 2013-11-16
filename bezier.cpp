@@ -74,6 +74,8 @@ std::vector<float> transformations;
 
 bool isWireframe;
 bool isFlat;
+bool isH = false;
+bool isHidden = false;
 bool isS = 0;
 
 /** Sets up the lights and light properties in the scene. */
@@ -150,6 +152,58 @@ void myDisplay() {
 
   // DRAW EVERYTHING!!
   for (int i = 0; i < bigPatches.size(); i++) {
+    // Hidden line removal (will need to draw twice)
+    if (isH) {
+      if (isHidden) {
+	glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+	glColor3f(1.0f,1.0f,1.0f);
+      
+	// 1st draw
+	glPushMatrix();
+	glTranslatef(transformations[4*i], transformations[4*i + 1], 0.0f);
+	glRotatef(transformations[4*i + 2], 0.0, 1.0, 0.0 );
+	glRotatef(transformations[4*i + 3], 1.0, 0.0, 0.0 );
+	if (!tesType.compare("-u")) {
+	  unifTesselator(bigPatches[i]);
+	} else if (!tesType.compare("-a")) {
+	  adapTesselator(bigPatches[i]);
+	}
+	glPopMatrix();
+
+	glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+	glEnable(GL_POLYGON_OFFSET_FILL);
+	glPolygonOffset(1.0, 1.0);
+	glColor3f(0.0f,0.0f,0.0f);
+	// 2nd draw
+	glPushMatrix();
+	glTranslatef(transformations[4*i], transformations[4*i + 1], 0.0f);
+	glRotatef(transformations[4*i + 2], 0.0, 1.0, 0.0 );
+	glRotatef(transformations[4*i + 3], 1.0, 0.0, 0.0 );
+	if (!tesType.compare("-u")) {
+	  unifTesselator(bigPatches[i]);
+	} else if (!tesType.compare("-a")) {
+	  adapTesselator(bigPatches[i]);
+	}
+	glPopMatrix();
+	glDisable(GL_POLYGON_OFFSET_FILL);
+      } else {
+	// 'h' active but filled
+	glPolygonMode( GL_FRONT_AND_BACK, GL_FILL );
+	glColor3f(1.0f,1.0f,1.0f);
+	glPushMatrix();
+	glTranslatef(transformations[4*i], transformations[4*i + 1], 0.0f);
+	glRotatef(transformations[4*i + 2], 0.0, 1.0, 0.0 );
+	glRotatef(transformations[4*i + 3], 1.0, 0.0, 0.0 );
+	if (!tesType.compare("-u")) {
+	  unifTesselator(bigPatches[i]);
+	} else if (!tesType.compare("-a")) {
+	  adapTesselator(bigPatches[i]);
+	}
+	glPopMatrix();
+      }
+      
+    }
+
     glPushMatrix();
     glTranslatef(transformations[4*i], transformations[4*i + 1], 0.0f);
     glRotatef(transformations[4*i + 2], 0.0, 1.0, 0.0 );
@@ -433,7 +487,20 @@ void normalKeyFunc(unsigned char key, int x, int y) {
       objectNo = 0;
     break;
 
+  case 'h':
+    isS = false;
+    glDisable(GL_LIGHTING);
+    glDisable(GL_LIGHT0);
+    if (!isHidden || isH == false) {
+      isHidden = true;
+    } else {
+      isHidden = false;
+    }
+    isH = true;
+    break;
+
   case 's':
+    isH = false;
     isS = true;
     lightSetUp();
     /*toggle flat to smooth shading */
@@ -447,6 +514,9 @@ void normalKeyFunc(unsigned char key, int x, int y) {
     break;
     // w : filled to wireframe
   case 'w':
+    isH = false;
+    // Reset to white
+    glColor3f(1.0f,1.0f,1.0f);
     isS = false;
     glDisable(GL_LIGHTING);
     glDisable(GL_LIGHT0);
