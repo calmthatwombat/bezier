@@ -172,19 +172,44 @@ void myDisplay() {
 
 /** Draw uniform tesselation form */
 void unifTesselator() {
-  for (int p = 0; p < bigPatches.size(); p++) {
-      std::vector< std::vector<Point> > patches = bigPatches[p];
+  if (bigPatches.size() == 0) {
       for (int i = 0; i < patches.size(); i++) {
         // Draws entire patch uniformly
         unifSubdividePatch(patches[i], subStep);
       }
+  } else {
+      for (int p = 0; p < bigPatches.size(); p++) {
+        std::vector< std::vector<Point> > patches = bigPatches[p];
+        for (int i = 0; i < patches.size(); i++) {
+          // Draws entire patch uniformly
+          unifSubdividePatch(patches[i], subStep);
+      }
   }
+
+  }
+
 
 }
 
 /** Draw adaptive tesselation form  */
 void adapTesselator() {
-  for (int p = 0; p < bigPatches.size(); p++) {
+  if (bigPatches.size() == 0) {
+      for (int i = 0; i < patches.size(); i++) {
+        // Set up initial recursion case
+        std::vector<Point> tl, bl, br, tr;
+        tl = bezSurfacifier(patches[i], 0.0f, 0.0f);
+        bl = bezSurfacifier(patches[i], 0.0f, 1.0f);
+        br = bezSurfacifier(patches[i], 1.0f, 1.0f);
+        tr = bezSurfacifier(patches[i], 1.0f, 0.0f);
+        // Draws entire patch adaptively
+        adapSubdividePatch(patches[i], tl, bl, tr, 0.0f, 0.0f, 0.0f, 1.0f, 1.0f, 0.0f, 
+               subStep);
+        adapSubdividePatch(patches[i], tr, bl, br, 1.0f, 0.0f, 0.0f, 1.0f, 1.0f, 1.0f, 
+               subStep);
+      }
+
+} else {
+    for (int p = 0; p < bigPatches.size(); p++) {
       std::vector< std::vector<Point> > patches = bigPatches[p];
       for (int i = 0; i < patches.size(); i++) {
         // Set up initial recursion case
@@ -201,6 +226,9 @@ void adapTesselator() {
       }
 
   }
+
+}
+
 
 }
 
