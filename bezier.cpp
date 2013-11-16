@@ -27,9 +27,9 @@ class Viewpoint;
 
 /** Method Declarations */
 void unifSubdividePatch(std::vector<Point> patch, float step);
-void adapSubdividePatch(std::vector<Point> patch, std::vector<Point> pt1, 
-			std::vector<Point> pt2, std::vector<Point> pt3, float u1, 
-			float v1, float u2, float v2, float u3, float v3, 
+void adapSubdividePatch(std::vector<Point> patch, std::vector<Point> pt1,
+			std::vector<Point> pt2, std::vector<Point> pt3, float u1,
+			float v1, float u2, float v2, float u3, float v3,
 			float tolerance);
 std::vector<Point> bezSurfacifier(std::vector<Point> bsCPoints, float u, float v);
 std::vector<Point> bezCurvifier(Point p0, Point p1, Point p2, Point p3, float t);
@@ -49,7 +49,7 @@ public:
   float x, y, z;
 };
 
-/** Viewport class  */
+/** Viewport class */
 class Viewport {
 public:
   int w, h; // width and height
@@ -80,7 +80,7 @@ bool isS = 0;
 /** Sets up the lights and light properties in the scene. */
 void lightSetUp() {
 
-  // defining light attributes:
+  //defining light attributes:
   GLfloat ambientLight[] = { 0.0f, 0.0f, 0.0f, 1.0f };
   GLfloat diffuseLight[] = { 0.9f, 0.9f, 0.9f, 1.0f };
   GLfloat specularLight[] = { 0.5f, 0.5f, 0.5f, 1.0f };
@@ -93,7 +93,6 @@ void lightSetUp() {
   glLightfv(GL_LIGHT0, GL_SPECULAR, specularLight);
   glLightfv(GL_LIGHT0, GL_POSITION, position);
   glLightModelfv(GL_LIGHT_MODEL_AMBIENT, global_ambient);
-
 
   //enabling the lighting
   glEnable(GL_LIGHTING);
@@ -109,7 +108,7 @@ void myReshape(int w, int h) {
   // Projection matrix
   glMatrixMode(GL_PROJECTION);
   glLoadIdentity();
-  glOrtho(-5.0, 5.0, -5.0, 5.0, 1, 30);
+  glOrtho(-4, 4, -4, 4, 2, 20);
 }
 
 /** Simple scene initialization */
@@ -172,36 +171,28 @@ void myDisplay() {
 
 /** Draw uniform tesselation form */
 void unifTesselator() {
-  for (int p = 0; p < bigPatches.size(); p++) {
-    std::vector< std::vector<Point> > patches = bigPatches[p];
+  if (bigPatches.size() == 0) {
     for (int i = 0; i < patches.size(); i++) {
       // Draws entire patch uniformly
       unifSubdividePatch(patches[i], subStep);
     }
-    if (bigPatches.size() == 0) {
+  } else {
+    for (int p = 0; p < bigPatches.size(); p++) {
+      std::vector< std::vector<Point> > patches = bigPatches[p];
       for (int i = 0; i < patches.size(); i++) {
-        // Draws entire patch uniformly
-        unifSubdividePatch(patches[i], subStep);
+	// Draws entire patch uniformly
+	unifSubdividePatch(patches[i], subStep);
       }
-    } else {
-      for (int p = 0; p < bigPatches.size(); p++) {
-        std::vector< std::vector<Point> > patches = bigPatches[p];
-        for (int i = 0; i < patches.size(); i++) {
-          // Draws entire patch uniformly
-          unifSubdividePatch(patches[i], subStep);
-	}
-      }
-
     }
 
   }
 
+
 }
 
-/** Draw adaptive tesselation form  */
+/** Draw adaptive tesselation form */
 void adapTesselator() {
-  for (int p = 0; p < bigPatches.size(); p++) {
-    std::vector< std::vector<Point> > patches = bigPatches[p];
+  if (bigPatches.size() == 0) {
     for (int i = 0; i < patches.size(); i++) {
       // Set up initial recursion case
       std::vector<Point> tl, bl, br, tr;
@@ -210,62 +201,48 @@ void adapTesselator() {
       br = bezSurfacifier(patches[i], 1.0f, 1.0f);
       tr = bezSurfacifier(patches[i], 1.0f, 0.0f);
       // Draws entire patch adaptively
-      adapSubdividePatch(patches[i], tl, bl, tr, 0.0f, 0.0f, 0.0f, 1.0f, 1.0f, 0.0f, 
+      adapSubdividePatch(patches[i], tl, bl, tr, 0.0f, 0.0f, 0.0f, 1.0f, 1.0f, 0.0f,
 			 subStep);
-      adapSubdividePatch(patches[i], tr, bl, br, 1.0f, 0.0f, 0.0f, 1.0f, 1.0f, 1.0f, 
+      adapSubdividePatch(patches[i], tr, bl, br, 1.0f, 0.0f, 0.0f, 1.0f, 1.0f, 1.0f,
 			 subStep);
     }
-    if (bigPatches.size() == 0) {
+
+  } else {
+    for (int p = 0; p < bigPatches.size(); p++) {
+      std::vector< std::vector<Point> > patches = bigPatches[p];
       for (int i = 0; i < patches.size(); i++) {
-	// Set up initial recursion case
-	std::vector<Point> tl, bl, br, tr;
-	tl = bezSurfacifier(patches[i], 0.0f, 0.0f);
-	bl = bezSurfacifier(patches[i], 0.0f, 1.0f);
-	br = bezSurfacifier(patches[i], 1.0f, 1.0f);
-	tr = bezSurfacifier(patches[i], 1.0f, 0.0f);
-	// Draws entire patch adaptively
-	adapSubdividePatch(patches[i], tl, bl, tr, 0.0f, 0.0f, 0.0f, 1.0f, 1.0f, 0.0f, 
+        // Set up initial recursion case
+        std::vector<Point> tl, bl, br, tr;
+        tl = bezSurfacifier(patches[i], 0.0f, 0.0f);
+        bl = bezSurfacifier(patches[i], 0.0f, 1.0f);
+        br = bezSurfacifier(patches[i], 1.0f, 1.0f);
+        tr = bezSurfacifier(patches[i], 1.0f, 0.0f);
+        // Draws entire patch adaptively
+        adapSubdividePatch(patches[i], tl, bl, tr, 0.0f, 0.0f, 0.0f, 1.0f, 1.0f, 0.0f,
 			   subStep);
-	adapSubdividePatch(patches[i], tr, bl, br, 1.0f, 0.0f, 0.0f, 1.0f, 1.0f, 1.0f, 
+        adapSubdividePatch(patches[i], tr, bl, br, 1.0f, 0.0f, 0.0f, 1.0f, 1.0f, 1.0f,
 			   subStep);
-      }
-
-    } else {
-      for (int p = 0; p < bigPatches.size(); p++) {
-	std::vector< std::vector<Point> > patches = bigPatches[p];
-	for (int i = 0; i < patches.size(); i++) {
-	  // Set up initial recursion case
-	  std::vector<Point> tl, bl, br, tr;
-	  tl = bezSurfacifier(patches[i], 0.0f, 0.0f);
-	  bl = bezSurfacifier(patches[i], 0.0f, 1.0f);
-	  br = bezSurfacifier(patches[i], 1.0f, 1.0f);
-	  tr = bezSurfacifier(patches[i], 1.0f, 0.0f);
-	  // Draws entire patch adaptively
-	  adapSubdividePatch(patches[i], tl, bl, tr, 0.0f, 0.0f, 0.0f, 1.0f, 1.0f, 0.0f, 
-			     subStep);
-	  adapSubdividePatch(patches[i], tr, bl, br, 1.0f, 0.0f, 0.0f, 1.0f, 1.0f, 1.0f, 
-			     subStep);
-	}
-
       }
 
     }
+
   }
+
 
 }
 
 /** Given a triangle and their respective u v coords, recursively resize triangles
- *  adaptively. */
-void adapSubdividePatch(std::vector<Point> patch, std::vector<Point> pt1, 
-			std::vector<Point> pt2, std::vector<Point> pt3, float u1, 
-			float v1, float u2, float v2, float u3, float v3, 
+ * adaptively. */
+void adapSubdividePatch(std::vector<Point> patch, std::vector<Point> pt1,
+			std::vector<Point> pt2, std::vector<Point> pt3, float u1,
+			float v1, float u2, float v2, float u3, float v3,
 			float tolerance) {
   // Midpoint primitive points
-  Point pp12((pt1[0].x + pt2[0].x)/2, (pt1[0].y + pt2[0].y)/2, 
+  Point pp12((pt1[0].x + pt2[0].x)/2, (pt1[0].y + pt2[0].y)/2,
 	     (pt1[0].z + pt2[0].z)/2);
-  Point pp23((pt2[0].x + pt3[0].x)/2, (pt2[0].y + pt3[0].y)/2, 
+  Point pp23((pt2[0].x + pt3[0].x)/2, (pt2[0].y + pt3[0].y)/2,
 	     (pt2[0].z + pt3[0].z)/2);
-  Point pp31((pt3[0].x + pt1[0].x)/2, (pt3[0].y + pt1[0].y)/2, 
+  Point pp31((pt3[0].x + pt1[0].x)/2, (pt3[0].y + pt1[0].y)/2,
 	     (pt3[0].z + pt1[0].z)/2);
   // Midpoint u and v
   float u12 = (u1 + u2)/2;
@@ -280,14 +257,14 @@ void adapSubdividePatch(std::vector<Point> patch, std::vector<Point> pt1,
   std::vector<Point> bsp31 = bezSurfacifier(patch, u31, v31);
   
   // Calculate distances
-  float d12 = sqrt(pow(pp12.x - bsp12[0].x, 2) + 
+  float d12 = sqrt(pow(pp12.x - bsp12[0].x, 2) +
 		   pow(pp12.y - bsp12[0].y, 2) +
 		   pow(pp12.z - bsp12[0].z, 2));
-  float d23 = sqrt(pow(pp23.x - bsp23[0].x, 2) + 
-		   pow(pp23.y - bsp23[0].y, 2) + 
+  float d23 = sqrt(pow(pp23.x - bsp23[0].x, 2) +
+		   pow(pp23.y - bsp23[0].y, 2) +
 		   pow(pp23.z - bsp23[0].z, 2));
-  float d31 = sqrt(pow(pp31.x - bsp31[0].x, 2) + 
-		   pow(pp31.y - bsp31[0].y, 2) + 
+  float d31 = sqrt(pow(pp31.x - bsp31[0].x, 2) +
+		   pow(pp31.y - bsp31[0].y, 2) +
 		   pow(pp31.z - bsp31[0].z, 2));
   // Pass tolerance test
   int isPass12 = (d12 <= tolerance);
@@ -310,15 +287,15 @@ void adapSubdividePatch(std::vector<Point> patch, std::vector<Point> pt1,
   } else if (isPass12 && isPass23) {
     // isPass31 fails
     adapSubdividePatch(patch, bsp31, pt1, pt2, u31, v31, u1, v1, u2, v2, subStep);
-    adapSubdividePatch(patch, bsp31, pt2, pt3, u31, v31, u2, v2, u3, v3, subStep);    
+    adapSubdividePatch(patch, bsp31, pt2, pt3, u31, v31, u2, v2, u3, v3, subStep);
   } else if (isPass23 && isPass31) {
     // isPass12 fails
     adapSubdividePatch(patch, bsp12, pt2, pt3, u12, v12, u2, v2, u3, v3, subStep);
-    adapSubdividePatch(patch, bsp12, pt3, pt1, u12, v12, u3, v3, u1, v1, subStep);    
+    adapSubdividePatch(patch, bsp12, pt3, pt1, u12, v12, u3, v3, u1, v1, subStep);
   } else if (isPass12 && isPass31) {
     // isPass23 fails
     adapSubdividePatch(patch, bsp23, pt3, pt1, u23, v23, u3, v3, u1, v1, subStep);
-    adapSubdividePatch(patch, bsp23, pt1, pt2, u23, v23, u1, v1, u2, v2, subStep);    
+    adapSubdividePatch(patch, bsp23, pt1, pt2, u23, v23, u1, v1, u2, v2, subStep);
   } else if (isPass12) {
     // isPass23 and isPass31 fail
     adapSubdividePatch(patch, bsp23, pt1, pt2, u23, v23, u1, v1, u2, v2, subStep);
@@ -339,13 +316,13 @@ void adapSubdividePatch(std::vector<Point> patch, std::vector<Point> pt1,
     adapSubdividePatch(patch, pt1, bsp12, bsp31, u1, v1, u12, v12, u31, v31, subStep);
     adapSubdividePatch(patch, pt2, bsp23, bsp12, u2, v2, u23, v23, u12, v12, subStep);
     adapSubdividePatch(patch, pt3, bsp31, bsp23, u3, v3, u31, v31, u23, v23, subStep);
-    adapSubdividePatch(patch, bsp12, bsp23, bsp31, u12, v12, u23, v23, u31, v31, 
+    adapSubdividePatch(patch, bsp12, bsp23, bsp31, u12, v12, u23, v23, u31, v31,
 		       subStep);
   }
 }
 
 /** Given a patch containing 16 control points, draw entire patch after uniform
- *  subdivision */
+ * subdivision */
 void unifSubdividePatch (std::vector<Point> patch, float step) {
   // the parametric values u, v
   float u, v;
@@ -358,13 +335,13 @@ void unifSubdividePatch (std::vector<Point> patch, float step) {
       // Top left
       tl = bezSurfacifier(patch, u, v);
       // Bottom left
-      if (v + step >= 1.0f) { 
+      if (v + step >= 1.0f) {
 	bl = bezSurfacifier(patch, u, 1.0f);
       } else {
 	bl = bezSurfacifier(patch, u, v + step);
       }
       // Bottom right
-      if (v + step >= 1.0f && u + step >= 1.0f) { 
+      if (v + step >= 1.0f && u + step >= 1.0f) {
 	br = bezSurfacifier(patch, 1.0f, 1.0f);
       } else if (v + step >= 1.0f) {
 	br = bezSurfacifier(patch, u + step, 1.0f);
@@ -374,7 +351,7 @@ void unifSubdividePatch (std::vector<Point> patch, float step) {
 	br = bezSurfacifier(patch, u + step, v + step);
       }
       // Top right
-      if (u + step >= 1.0f) { 
+      if (u + step >= 1.0f) {
 	tr = bezSurfacifier(patch, 1.0f, v);
       } else {
 	tr = bezSurfacifier(patch, u + step, v);
@@ -395,9 +372,9 @@ void unifSubdividePatch (std::vector<Point> patch, float step) {
   
 }
 
-/** Create SURFACE bezier point, given u and v of bezier surface control points 
- *  bsCPoints == bezier surface Control Points
- *  Returns size-2 vector, 2nd of which is the vertex normal */
+/** Create SURFACE bezier point, given u and v of bezier surface control points
+ * bsCPoints == bezier surface Control Points
+ * Returns size-2 vector, 2nd of which is the vertex normal */
 std::vector<Point> bezSurfacifier(std::vector<Point> bsCPoints, float u, float v) {
   // u bez-curve
   Point A = bezCurvifier(bsCPoints[0], bsCPoints[1], bsCPoints[2], bsCPoints[3], u)[0];
@@ -415,7 +392,7 @@ std::vector<Point> bezSurfacifier(std::vector<Point> bsCPoints, float u, float v
   std::vector<Point> uCurve = bezCurvifier(E, F, G, H, u);
 
   // Normalized normal
-  Point normal(uCurve[1].y*vCurve[1].z - uCurve[1].z*vCurve[1].y, 
+  Point normal(uCurve[1].y*vCurve[1].z - uCurve[1].z*vCurve[1].y,
 	       uCurve[1].z*vCurve[1].x - uCurve[1].x*vCurve[1].z,
 	       uCurve[1].x*vCurve[1].y - uCurve[1].y*vCurve[1].x);
   float mag = sqrt(pow(normal.x, 2) + pow(normal.y, 2) + pow(normal.z, 2));
@@ -435,25 +412,25 @@ std::vector<Point> bezSurfacifier(std::vector<Point> bsCPoints, float u, float v
 std::vector<Point> bezCurvifier(Point p0, Point p1, Point p2, Point p3, float t) {
   // Order matters
   Point A(p0.x * (1.0 - t) + p1.x * t,
-	  p0.y * (1.0 - t) + p1.y * t,
-	  p0.z * (1.0 - t) + p1.z * t);
+          p0.y * (1.0 - t) + p1.y * t,
+          p0.z * (1.0 - t) + p1.z * t);
 
   Point B(p1.x * (1.0 - t) + p2.x * t,
-	  p1.y * (1.0 - t) + p2.y * t,
-	  p1.z * (1.0 - t) + p2.z * t);
+          p1.y * (1.0 - t) + p2.y * t,
+          p1.z * (1.0 - t) + p2.z * t);
 
   Point C(p2.x * (1.0 - t) + p3.x * t,
-	  p2.y * (1.0 - t) + p3.y * t,
-	  p2.z * (1.0 - t) + p3.z * t);
+          p2.y * (1.0 - t) + p3.y * t,
+          p2.z * (1.0 - t) + p3.z * t);
 
   //Now, split AB and BC to form a new segment DE:
   Point D(A.x * (1.0 - t) + B.x * t,
-	  A.y * (1.0 - t) + B.y * t,
-	  A.z * (1.0 - t) + B.z * t);
+          A.y * (1.0 - t) + B.y * t,
+          A.z * (1.0 - t) + B.z * t);
 
   Point E(B.x * (1.0 - t) + C.x * t,
-	  B.y * (1.0 - t) + C.y * t,
-	  B.z * (1.0 - t) + C.z * t);
+          B.y * (1.0 - t) + C.y * t,
+          B.z * (1.0 - t) + C.z * t);
 
   // Pick the right point on DE:
   Point finalP(D.x * (1.0 - t) + E.x * t,
@@ -461,8 +438,8 @@ std::vector<Point> bezCurvifier(Point p0, Point p1, Point p2, Point p3, float t)
 	       D.z * (1.0 - t) + E.z * t);
 
   // Find dP/dt
-  Point dPdt(3 * (E.x - D.x), 
-	     3 * (E.y - D.y), 
+  Point dPdt(3 * (E.x - D.x),
+	     3 * (E.y - D.y),
 	     3 * (E.z - D.z));
 
   // Result
@@ -474,7 +451,7 @@ std::vector<Point> bezCurvifier(Point p0, Point p1, Point p2, Point p3, float t)
 }
 
 
-/** 
+/**
  * NORMALKEYFUNC method specifies fill, wireframe, and shading
  options of the object. */
 void normalKeyFunc(unsigned char key, int x, int y) {
@@ -514,20 +491,20 @@ void normalKeyFunc(unsigned char key, int x, int y) {
     zoom += 0.1f;
     glMatrixMode(GL_PROJECTION);
     glLoadIdentity();
-    glOrtho(-5.0 + zoom, 5.0 - zoom, -5.0 + zoom, 5.0 - zoom, 1.0, 30.0);
+    glOrtho(-4.0 + zoom, 4.0 - zoom, -4.0 + zoom, 4.0 - zoom, 1.0, 30.0);
     break;
   case '-':
     zoom -= 0.1f;
     glMatrixMode(GL_PROJECTION);
     glLoadIdentity();
-    glOrtho(-5.0 + zoom, 5.0 - zoom, -5.0 + zoom, 5.0 - zoom, 1.0, 30.0);
+    glOrtho(-4.0 + zoom, 4.0 - zoom, -4.0 + zoom, 4.0 - zoom, 1.0, 30.0);
     break;
   }
   glutPostRedisplay();
 }
 
 
-/** 
+/**
  * SPECIALKEYFUNC method specifies the zoom, transformation.*/
 
 void specialKeyFunc(int key, int x, int y) {
@@ -579,60 +556,60 @@ int main(int argc, char *argv[]) {
   // Parsing command line for: input file name, the subdivision paramter, and
   // the flag which determines if subdivision should be adaptive or uniform:
   std::string file = std::string(argv[1]);
-  tesType = std::string(argv[3]);
   subStep = atof(argv[2]);
+  tesType = std::string(argv[3]);
 
-  std::ifstream inpfile(file.c_str()); 
-  if(!inpfile.is_open()) { 
-    std::cout << "Unable to open file" << std::endl; 
-  } else { 
+  std::ifstream inpfile(file.c_str());
+  if(!inpfile.is_open()) {
+    std::cout << "Unable to open file" << std::endl;
+  } else {
     std::string line;
     std::vector<Point> patch;
     while(inpfile.good()) {
 
-      std::vector<std::string> splitline; 
+      std::vector<std::string> splitline;
       std::string buf;
 
-      std::getline(inpfile,line); 
+      std::getline(inpfile,line);
       std::stringstream ss(line);
 
-      while (ss >> buf) { 
-	splitline.push_back(buf); 
+      while (ss >> buf) {
+        splitline.push_back(buf);
       }
 
 
-      // Ignore blank lines 
-      if(splitline.size() == 0) { 
-	continue;  
-      } 
-      if (splitline.size() == 1) { 
-	numPatches.push_back(atoi(splitline[0].c_str())); 
+      // Ignore blank lines
+      if(splitline.size() == 0) {
+        continue;
+      }
+      if (splitline.size() == 1) {
+	numPatches.push_back(atoi(splitline[0].c_str()));
 	continue;
-	//in the .scene file, each object is separated by a '# #'
-	//so the '# #' is parsed, the patches for the object is added
-	//to bigPatches, and patches gets cleared
+        //in the .scene file, each object is separated by a '# #'
+        //so the '# #' is parsed, the patches for the object is added
+        //to bigPatches, and patches gets cleared
       } else if(splitline.size() == 2) {
 	bigPatches.push_back(patches);
 	patches.clear();
 	continue;
 
       } else {
-	Point p1(atof(splitline[0].c_str()), 
-		 atof(splitline[1].c_str()), 
-		 atof(splitline[2].c_str())); 
-	Point p2(atof(splitline[3].c_str()), 
-		 atof(splitline[4].c_str()), 
-		 atof(splitline[5].c_str())); 
-	Point p3(atof(splitline[6].c_str()), 
-		 atof(splitline[7].c_str()), 
-		 atof(splitline[8].c_str())); 
-	Point p4(atof(splitline[9].c_str()), 
-		 atof(splitline[10].c_str()), 
+	Point p1(atof(splitline[0].c_str()),
+		 atof(splitline[1].c_str()),
+		 atof(splitline[2].c_str()));
+	Point p2(atof(splitline[3].c_str()),
+		 atof(splitline[4].c_str()),
+		 atof(splitline[5].c_str()));
+	Point p3(atof(splitline[6].c_str()),
+		 atof(splitline[7].c_str()),
+		 atof(splitline[8].c_str()));
+	Point p4(atof(splitline[9].c_str()),
+		 atof(splitline[10].c_str()),
 		 atof(splitline[11].c_str()));
 
-	patch.push_back(p1); 
-	patch.push_back(p2); 
-	patch.push_back(p3); 
+	patch.push_back(p1);
+	patch.push_back(p2);
+	patch.push_back(p3);
 	patch.push_back(p4);
 
 	// If patch size is 16, then make patch is done and look for next patch
@@ -644,6 +621,17 @@ int main(int argc, char *argv[]) {
     }
     inpfile.close();
   }
+
+  for (int i = 0; i < patches.size(); i++) {
+    printf("\n");
+    for (int j = 0; j < 16; j+= 4) {
+      printf("\n");
+      for (int k = 3; k >= 0; k--) {
+	printf("%.3f %.3f %.3f  ", patches[i][j + k].x, patches[i][j+k].y, patches[i][j+k].z);
+      }
+    }
+  }
+  
 
   /* Glut stuff */
   // Initialize glut
